@@ -1,0 +1,43 @@
+* { padding: 0px; margin: 0px auto; }
+html, body { background-color: #111111; font:normal 12pt "Century Gothic", Verdana, Arial; color: #FFFFFF; }
+
+.checkboxes { padding:10px; border:1px solid #444444; }
+.textboxes { padding:5px; background-color:#FFFFFF; border:1px solid #444444; }
+
+#header  { width:1324px; margin-top:15px; font-size:24pt; }
+#wrapper { width:1324px; height:800px; margin-top:10px; background-color:#000000; border:1px solid black; }
+#wrapper #content  { width:1024px; height:590px; float:left; }
+#wrapper #controls { width:280px; height:780px; padding:0px 10px 20px 10px; background-color:#111111; float:right; }
+#wrapper #controls .settings { padding:19px 0px; text-align:right; border-bottom:1px solid #000000; border-top:1px solid #222222; }
+#wrapper #controls .settings:first-child { border-top:0; }
+#wrapper #controls .settings:last-child { border-bottom:0; }
+#wrapper #controls .settings .settingsHeader { font-size:14pt; color:#C68A0D; }
+#wrapper #controls #properties #lineNormal { width:25px; text-align:center; }
+#wrapper #controls #loadBtn { width:150px; padding:6px 0px; background-color:#C68A0D; color:#000000; border:1px solid #000000; text-align:center; cursor:pointer; }
+#wrapper #controls #loadBtn:hover { background-color:#EAA833; }
+#wrapper #controls #exportBtn { width:150px; padding:6px 0px; background-color:#11BE41; color:#000000; border:1px solid #000000; text-align:center; cursor:pointer; }
+#wrapper #controls #exportBtn:hover { background-color:#45ED73; }
+#wrapper #controls #resetBtn { width:150px; padding:6px 0px; background-color:#F11B2B; color:#000000; border:1px solid #000000; text-align:center; cursor:pointer; }
+#wrapper #controls #resetBtn:hover { background-color:#E76960; }
+
+#wrapper #controls .toggleBtn { list-style:none; width:63px; padding:5px 10px; margin-left:5px; background-color:#222222; text-align:center; font-size:10pt; border:1px solid #000000; float:left; cursor:pointer; }
+#wrapper #controls .toggleBtn.active { background-color:#D5971D; color:#000000; }
+#wrapper #controls .toggleBtn:hover { background-color:#F6C33D; color:#000000; }
+#wrapper #controls .toggleBtn.inactive { background-color:#777777; color:#555555; cursor:initial; }
+
+#wrapper audio { width:100px; margin:5px 20px; background-color:#000000; float:left; }
+
+#dialogOverlay { width:100%; height:100%; background-color:#000000; opacity:0.6; position:absolute; top:0px; left:0px; display:none; }
+#dialog { width:800px; height:400px; background-color:#000000; border:2px solid #000000; border-radius:10px; position:absolute; top:50%; left:50%; margin-top:-200px; margin-left:-400px; display:none; }
+#dialog #dialogHeader { width:750px; padding:13px 25px; background-color:#F11B2B; color:#000000; border-radius:8px 8px 0px 0px; font-size:14pt; font-weight:bold; }
+#dialog #dialogContent { width:800px; height:300px; padding:2px 0px; }
+#dialog #dialogContent #dialogTextarea { width:787px; height:288px; padding:5px; }
+#dialog #dialogFooter { width:800px; height:47px; background-color:#333333; border-radius:0px 0px 8px 8px; }
+#dialog #dialogFooter .button { width:100px; margin:2px 2px 0px 2px; padding:11px 0px; color:#000000; text-align:center; float:right; cursor:pointer; }
+#dialog #dialogFooter .button.save { background-color:#F11B2B; }
+#dialog #dialogFooter .button.close { background-color:#CCCCCC; border-radius:0px 0px 6px 0px; }
+
+/** CLEARFIX for floated elements */
+.cf:before, .cf:after { content:""; display:table; } /* For modern browsers */
+.cf:after { clear:both; } /* For modern browsers */
+.cf { *zoom:1; } /* For IE 6/7 (triggers hasLayout) */

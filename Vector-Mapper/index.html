@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="stylesheet.css" type="text/css" />
+	<script type="text/javascript" language="javascript" src="../../jquery-1.11.3.min.js"></script>
+	<script type="text/javascript" language="javascript" src="script.js"></script>
+</head>
+<body onload="main.init();">
+
+	<!-- DIALOG BOX (EXPORT) -->
+	<div id="dialogOverlay">&nbsp;</div>
+	<div id="dialog">
+		<div id="dialogHeader">EXPORT</div>
+		<div id="dialogContent">
+			<textarea id="dialogTextarea"></textarea>
+		</div>
+		<div id="dialogFooter" class="cf">
+			<div class="button close" id="dialogCloseBtn">CLOSE</div>
+			<div class="button save" id="dialogSaveBtn">LOAD</div>
+		</div>
+	</div>
+
+	<!-- HEADER -->
+	<div id="header">Vector Mapping</div>
+
+	<!-- CONTENT -->
+	<div id="wrapper">
+
+		<div id="content">
+			<canvas id="canvas">
+		</div>
+		<div id="controls">
+
+			<div id="info" class="settings">
+				<span class="settingsHeader"><u>INFO</u></span><br /><br />
+				Canvas Size: <span id="canvasSize">0x, 0y</span><br />
+				Mouse: <span id="mouseX">0</span>x, <span id="mouseY">0</span>y<br />
+				Last Point: <span id="lastPointX">0</span>x, <span id="lastPointY">0</span>y
+			</div>
+
+			<div id="visibility" class="settings">
+				<span class="settingsHeader"><u>VISIBILITY</u></span><br />
+				<label for="showBackgroundCheckbox">Show Background</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="background" checked="true"><br />
+				<label for="showGridCheckbox">Show Grid</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="grid"><br />
+				<label for="showLinesCheckbox">Show Lines</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="lines" checked="true"><br />
+				<label for="showSnapCheckbox">Snap to Grid</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showSnapCheckbox" class="checkboxes" value="snap" checked="true"><br />
+			</div>
+
+			<div id="properties" class="settings">
+				<span class="settingsHeader"><u>PROPERTIES</u></span><br /><br />
+				<ul class="cf">
+					<li class="lineType toggleBtn active">FLOOR</li>
+					<li class="lineType toggleBtn">WALL</li>
+					<li class="lineType toggleBtn">CEILING</li>
+				</ul>
+				<br />
+				<label for="lineNormal">Line Normal:</label>&nbsp;&nbsp;&nbsp;<input type="text" class="textboxes" id="lineNormal" readonly="true" disabled="disabled" value="-1">
+				<br /><br />
+				<ul class="cf">
+					<li class="lineSound toggleBtn active">GRASS</li>
+					<li class="lineSound toggleBtn">WOOD</li>
+				</ul>
+			</div>
+
+			<div class="settings">
+				<div id="loadBtn">LOAD</div>
+			</div>
+
+			<div class="settings">
+				<div id="exportBtn">EXPORT</div>
+			</div>
+
+			<div class="settings">
+				<div id="resetBtn">RESET</div>
+			</div>
+
+		</div>
+
+	</div>
+
+</body>
+</html>
