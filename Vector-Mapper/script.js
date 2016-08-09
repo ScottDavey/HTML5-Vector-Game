@@ -159,11 +159,12 @@ var main = {
 		setTimeout(function () { main.draw(); }, 500);	// Hack to get around the fact that the image isn't loaded right away.
 	},
 	LoadGrid: function () {
-		var x, y;
+		var x, y, square;
+		square = 20;
 
-		for (y = 0; y < Math.ceil(main.CANVAS_HEIGHT / 250); y++) {
-			for (x = 0; x < Math.ceil(main.CANVAS_WIDTH / 250); x++) {
-				this.grid.push(new Texture(new Vector2(x * 250, y * 250), new Vector2(250, 250), 'transparent', 1, '#0E72D5'));
+		for (y = 0; y < Math.ceil(main.CANVAS_HEIGHT / square); y++) {
+			for (x = 0; x < Math.ceil(main.CANVAS_WIDTH / square); x++) {
+				this.grid.push(new Texture(new Vector2(x * square, y * square), new Vector2(square, square), 'transparent', 1, '#222222'));
 			}
 		}
 	},

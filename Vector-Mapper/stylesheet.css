@@ -6,7 +6,8 @@ html, body { background-color: #111111; font:normal 12pt "Century Gothic", Verda
 
 #header  { width:1324px; margin-top:15px; font-size:24pt; }
 #wrapper { width:1324px; height:800px; margin-top:10px; background-color:#000000; border:1px solid black; }
-#wrapper #content  { width:1024px; height:590px; float:left; }
+#wrapper #content { width:1024px; height:590px; float:left; }
+#wrapper #content canvas { border-top:1px solid #222222; border-bottom:1px solid #222222; }
 #wrapper #controls { width:280px; height:780px; padding:0px 10px 20px 10px; background-color:#111111; float:right; }
 #wrapper #controls .settings { padding:19px 0px; text-align:right; border-bottom:1px solid #000000; border-top:1px solid #222222; }
 #wrapper #controls .settings:first-child { border-top:0; }
@@ -28,11 +29,11 @@ html, body { background-color: #111111; font:normal 12pt "Century Gothic", Verda
 #wrapper audio { width:100px; margin:5px 20px; background-color:#000000; float:left; }
 
 #dialogOverlay { width:100%; height:100%; background-color:#000000; opacity:0.6; position:absolute; top:0px; left:0px; display:none; }
-#dialog { width:800px; height:400px; background-color:#000000; border:2px solid #000000; border-radius:10px; position:absolute; top:50%; left:50%; margin-top:-200px; margin-left:-400px; display:none; }
-#dialog #dialogHeader { width:750px; padding:13px 25px; background-color:#F11B2B; color:#000000; border-radius:8px 8px 0px 0px; font-size:14pt; font-weight:bold; }
-#dialog #dialogContent { width:800px; height:300px; padding:2px 0px; }
-#dialog #dialogContent #dialogTextarea { width:787px; height:288px; padding:5px; }
-#dialog #dialogFooter { width:800px; height:47px; background-color:#333333; border-radius:0px 0px 8px 8px; }
+#dialog { width:850px; height:400px; background-color:#000000; border:2px solid #000000; border-radius:10px; position:absolute; top:50%; left:50%; margin-top:-200px; margin-left:-425px; display:none; }
+#dialog #dialogHeader { width:800px; padding:13px 25px; background-color:#F11B2B; color:#000000; border-radius:8px 8px 0px 0px; font-size:14pt; font-weight:bold; }
+#dialog #dialogContent { width:850px; height:300px; padding:2px 0px; }
+#dialog #dialogContent #dialogTextarea { width:837px; height:288px; padding:5px; }
+#dialog #dialogFooter { width:850px; height:47px; background-color:#333333; border-radius:0px 0px 8px 8px; }
 #dialog #dialogFooter .button { width:100px; margin:2px 2px 0px 2px; padding:11px 0px; color:#000000; text-align:center; float:right; cursor:pointer; }
 #dialog #dialogFooter .button.save { background-color:#F11B2B; }
 #dialog #dialogFooter .button.close { background-color:#CCCCCC; border-radius:0px 0px 6px 0px; }
