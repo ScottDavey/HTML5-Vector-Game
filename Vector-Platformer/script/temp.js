@@ -311,10 +311,10 @@ function Player (level) {
 	this.jumpPower				= 15;
 	// WATER
 	this.isSwimming				= false;
-	this.walkingSound_Grass		= new Sound('sounds/SFX_Walking_Grass.mp3', true, true, false, 0.4);
-	this.walkingSound_Wood		= new Sound('sounds/SFX_Walking_Wood.mp3', true, true, false, 0.4);
+	this.walkingSound_Grass		= new Sound('sounds/SFX_Walking_Grass.mp3', true, true, false, 0.6);
+	this.walkingSound_Wood		= new Sound('sounds/SFX_Walking_Wood.mp3', true, true, false, 0.6);
 	this.waterSplash			= new Sound('sounds/SFX_Water_Splash.mp3', false, true, false, 0.7);
-	this.waterSwim				= new Sound('sounds/SFX_Water_Swim.mp3', false, true, false, 0.4);
+	this.waterSwim				= new Sound('sounds/SFX_Water_Swim.mp3', false, true, false, 0.5);
 
 	this.texture				= new Circle(this.center, this.radius, 'red');
 }
@@ -477,12 +477,12 @@ Player.prototype.update = function (gameTime) {
 	if (this.isOnGround && Math.round(this.velocity.x) !== 0 && !this.isSwimming) {
 		if (this.groundType === 'GRASS' && !this.walkingSound_Grass.IsPlaying()) {
 			this.walkingSound_Grass.Play();
-		} else if (this.groundType === 'WOOD' && !this.walkingSound_Wood.IsPlaying()) {
+		} else if (this.groundType === 'WOOD') {
 			this.walkingSound_Wood.Play();
 		}
 	} else {
-		if (this.walkingSound_Grass.IsPlaying()) this.walkingSound_Grass.Stop();
-		if (this.walkingSound_Wood.IsPlaying()) this.walkingSound_Wood.Stop();
+		this.walkingSound_Grass.Stop();
+		this.walkingSound_Wood.Stop();
 	}
 
 	// Update the player
@@ -513,8 +513,12 @@ function Level () {
 	this.gameTime			= new GameTime();
 	this.fps				= 0;
 
+	this.music				= new Sound('sounds/MUSIC_The-Forgotten_Forest.mp3', true, true, false, 0.2);
+
 	this.LoadLines();
 	//this.LoadGrid();
+
+	this.music.Play();
 }
 
 Level.prototype.LoadLines = function () {
