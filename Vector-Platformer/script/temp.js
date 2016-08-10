@@ -166,31 +166,7 @@ function Line (startPos, endPos, color, collision, normal, sound) {
 	this.color		= color;
 	this.collision	= collision;
 	this.normal		= normal;
-
-	sound			= 'GRASS';
-	if (typeof sound !== 'undefiend' && sound !== 'NONE') {
-		this.sound	= sound;
-		this.fx		= undefined;
-		this.LoadSound();
-	}
-};
-
-Line.prototype.LoadSound = function () {
-	var path, isLooping, vol;
-	switch (this.sound) {
-		case 'GRASS':
-			path		= 'sounds/SFX_Walking_Grass.mp3';
-			isLooping	= true;
-			vol			= 0.5;
-			break;
-		case 'WOOD':
-			path		= 'sounds/SFX_Walking_Wood.mp3';
-			isLooping	= true;
-			vol			= 0.5;
-			break;
-	}
-
-	this.fx = new Sound(path, isLooping, true, false, vol);	//path, isLooping, preloaded, hasControls, vol
+	this.sound		= sound;
 };
 
 Line.prototype.draw = function () {
@@ -335,6 +311,8 @@ function Player (level) {
 	this.jumpPower				= 15;
 	// WATER
 	this.isSwimming				= false;
+	this.walkingSound_Grass		= new Sound('sounds/SFX_Walking_Grass.mp3', true, true, false, 0.4);
+	this.walkingSound_Wood		= new Sound('sounds/SFX_Walking_Wood.mp3', true, true, false, 0.4);
 	this.waterSplash			= new Sound('sounds/SFX_Water_Splash.mp3', false, true, false, 0.7);
 	this.waterSwim				= new Sound('sounds/SFX_Water_Swim.mp3', false, true, false, 0.4);
 
@@ -371,15 +349,16 @@ Player.prototype.GetInput = function () {
 };
 
 Player.prototype.HandleCollision = function () {
-	var i, line, b, slope, y, xDiff, water;
+	var i, line, b, slope, y, xDiff, water, shouldPlayWalkSound;
 
-	water			= (typeof this.level.waterRect !== 'undefined') ? this.level.waterRect : '';
-	this.isOnGround = false;
+	water				= (typeof this.level.waterRect !== 'undefined') ? this.level.waterRect : '';
+	this.isOnGround 	= false;
+	shouldPlayWalkSound = false;
 
 	// Lines
 	for (i = 0; i < this.level.lines.length; i++) {
 
-		line = this.level.lines[i];
+		line 				= this.level.lines[i];
 
 		if ((line.collision == 'FLOOR' || line.collision == 'CEILING') && this.pos.x >= line.startPos.x && this.pos.x <= line.endPos.x) {
 
@@ -390,8 +369,9 @@ Player.prototype.HandleCollision = function () {
 			if (Math.abs(y - this.pos.y) <= this.radius) {
 				this.pos.y 		= (line.normal < 0) ? y - this.radius : y + this.radius;
 				this.velocity.y = 0;
-				if (line.collision == 'FLOOR') {
+				if (line.collision === 'FLOOR') {
 					this.isOnGround = true;
+					this.groundType	= line.sound;
 				} else {
 					this.velocity.y = this.gravity;
 				}
@@ -408,12 +388,6 @@ Player.prototype.HandleCollision = function () {
 
 			}
 
-		}
-
-		if (!line.fx.IsPlaying() && this.isOnGround && !this.isSwimming && Math.round(this.velocity.x) !== 0) {
-			line.fx.Play();
-		} else if(line.fx.IsPlaying()) {
-			line.fx.Stop();
 		}
 
 	}
@@ -498,6 +472,18 @@ Player.prototype.update = function (gameTime) {
 
 	this.GetInput();
 	this.ApplyPhysics(gameTime);
+
+	// Play waling sounds
+	if (this.isOnGround && Math.round(this.velocity.x) !== 0 && !this.isSwimming) {
+		if (this.groundType === 'GRASS' && !this.walkingSound_Grass.IsPlaying()) {
+			this.walkingSound_Grass.Play();
+		} else if (this.groundType === 'WOOD' && !this.walkingSound_Wood.IsPlaying()) {
+			this.walkingSound_Wood.Play();
+		}
+	} else {
+		if (this.walkingSound_Grass.IsPlaying()) this.walkingSound_Grass.Stop();
+		if (this.walkingSound_Wood.IsPlaying()) this.walkingSound_Wood.Stop();
+	}
 
 	// Update the player
 	this.texture.update(this.pos);
