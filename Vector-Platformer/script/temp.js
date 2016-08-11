@@ -179,15 +179,16 @@ var Input = {
 *****  RECTANGLE CLASS  *****
 ****************************/
 function Rectangle (x, y, width, height) {
-	this.x		= x;
-	this.y		= y;
-	this.width	= width;
-	this.height	= height;
-	this.left	= this.x;
-	this.top	= this.y;
-	this.right	= this.x + this.width;
-	this.bottom	= this.y + this.height;
-	this.center	= new Vector2((this.x + (this.width/2)), (this.y + (this.height/2)));
+	this.x			= x;
+	this.y			= y;
+	this.width		= width;
+	this.height		= height;
+	this.left		= this.x;
+	this.top		= this.y;
+	this.right		= this.x + this.width;
+	this.bottom		= this.y + this.height;
+	this.center		= new Vector2((this.x + (this.width/2)), (this.y + (this.height/2)));
+	this.halfSize 	= new Vector2((this.width / 2), (this.height / 2));
 }
 
 /***********************
@@ -288,6 +289,35 @@ Sprite.prototype.draw = function () {
 	main.context.drawImage(this.img, this.pos.x, this.pos.y);
 };
 
+/****************************
+*****  ANIMATION CLASS  *****
+****************************/
+function Animation (path, pos, frameSize, sheetWidth, animationSeq, speed, dir) {
+	this.img 				= document.createElement('img');
+	this.path 				= path;
+	this.pos 				= pos;
+	this.frameSize			= frameSize;
+	this.sheetWidth			= sheetWidth;
+	this.animationSeq		= animationSeq;
+	this.speed 				= speed;
+	this.dir 				= dir;
+	this.clip 				= new Rectangle(0, (this.animationSeq * this.frameSize), this.frameSize, this.frameSize);
+	this.frameCount 		= 0;
+	this.totalFrames 		= this.sheetWidth / this.frameSize;
+	this.previousFrameTime	= 0;
+	this.img.setAttribute('src', this.path);
+}
+
+Animation.prototype.update = function (pos, animationSeq, speed) {
+	this.pos 				= pos;
+	this.clip		 		= new Rectangle(0, (animationSeq * this.frameSize), this.frameSize, this.frameSize);
+	this.speed 				= speed;
+};
+
+Animation.prototype.animate = function (frameTime) {
+	//this.previousFrameTime = 0;
+};
+
 /************************
 *****  SOUND CLASS  *****
 ************************/
@@ -322,9 +352,8 @@ Sound.prototype.IsPlaying = function () {
 *******************************************/
 function Player (level) {
 	this.level					= level;
-	this.radius					= 10;
-	this.pos					= new Vector2(20, 300);
-	this.size					= new Vector2(this.radius * 2, this.radius * 2);
+	this.pos 					= new Vector2(20, 275);
+	this.size 					= new Vector2(27, 50);
 	this.velocity				= new Vector2(0, 0);
 	// Horizontal Movement
 	this.movement				= 0;
@@ -352,7 +381,9 @@ function Player (level) {
 	this.waterSplash			= new Sound('sounds/SFX_Water_Splash.mp3', false, true, false, 0.7);
 	this.waterSwim				= new Sound('sounds/SFX_Water_Swim.mp3', false, true, false, 0.5);
 
-	this.texture				= new Circle(this.pos, this.radius, 'red');
+	// this.texture				= new Circle(this.pos, this.radius, 'red');
+	//this.texture 				= new Texture(this.pos, this.size, 'rgba(197, 27, 32, 0.7)', 1, 'rgb(197, 27, 32)');
+	this.sprite					= new Sprite('images/player/small/Idle__000.png', this.pos, this.size);
 }
 
 Player.prototype.Clamp = function (value, min, max) {
@@ -385,8 +416,9 @@ Player.prototype.GetInput = function () {
 };
 
 Player.prototype.HandleCollision = function () {
-	var i, line, b, slope, y, xDiff, water, shouldPlayWalkSound;
+	var bounds, i, line, b, slope, y, xDiff, water, shouldPlayWalkSound, waterIntersect;
 
+	bounds				= new Rectangle(this.pos.x, this.pos.y, this.size.x, this.size.y);
 	water				= (typeof this.level.waterRect !== 'undefined') ? this.level.waterRect : '';
 	this.isOnGround 	= false;
 	shouldPlayWalkSound = false;
@@ -396,15 +428,14 @@ Player.prototype.HandleCollision = function () {
 
 		line = this.level.lines[i];
 
-		if ((line.collision == 'FLOOR' || line.collision == 'CEILING') && this.pos.x >= line.startPos.x && this.pos.x <= line.endPos.x) {
+		if ((line.collision == 'FLOOR' || line.collision == 'CEILING') && bounds.center.x >= line.startPos.x && bounds.center.x <= line.endPos.x) {
 
 			slope 	= (line.endPos.y - line.startPos.y) / (line.endPos.x - line.startPos.x);
 			b		= line.startPos.y - (slope * line.startPos.x);
-			y		= (slope * this.pos.x) + b;
+			y		= (slope * bounds.center.x) + b;
 
-			if (Math.abs(y - this.pos.y) <= this.radius) {
-				this.pos.y 		= (line.normal < 0) ? y - this.radius : y + this.radius;
-				// this.pos.y 		= Math.round(this.pos.y);
+			if (Math.abs(y - bounds.center.y) <= bounds.halfSize.y) {
+				this.pos.y 		= (line.normal < 0) ? y - bounds.height : y;
 				this.velocity.y = 0;
 				if (line.collision === 'FLOOR') {
 					this.isOnGround = true;
@@ -412,14 +443,13 @@ Player.prototype.HandleCollision = function () {
 				}
 			}
 
-		} else if (line.collision == 'WALL' && this.pos.y > line.startPos.y && this.pos.y < line.endPos.y) {
+		} else if (line.collision == 'WALL' && bounds.center.y > line.startPos.y && bounds.center.y < line.endPos.y) {
 
-			xDiff = Math.abs(this.pos.x - line.startPos.x);
+			xDiff = Math.abs(bounds.center.x - line.startPos.x);
 
-			if (xDiff <= this.radius) {
+			if (xDiff <= bounds.halfSize.x) {
 
-				this.pos.x 		= (line.normal < 0) ? line.startPos.x - this.radius : line.startPos.x + this.radius;
-				// this.pos.x 		= Math.round(this.pos.x);
+				this.pos.x 		= (line.normal < 0) ? line.startPos.x - bounds.width : line.startPos.x;
 				this.velocity.x = 0;
 
 			}
@@ -428,7 +458,9 @@ Player.prototype.HandleCollision = function () {
 
 	}
 
-	if (this.pos.x > water.left && this.pos.x < water.right && this.pos.y > water.top && this.pos.y < water.bottom) {
+	waterIntersect = RectangleExtensions.GetIntersectionDepth(bounds, water);
+
+	if (waterIntersect.x != 0 && waterIntersect.y != 0) {
 		// WE'RE SWIMMING!
 		if (!this.isSwimming) {
 			this.velocity.y = 0.5;
@@ -548,7 +580,7 @@ Player.prototype.update = function (gameTime) {
 	}
 
 	// Update the player
-	this.texture.update(this.pos);
+	this.sprite.update(this.pos);
 
 	this.movement	= 0;
 	this.movementX	= 0;
@@ -558,7 +590,7 @@ Player.prototype.update = function (gameTime) {
 
 Player.prototype.draw = function () {
 	// Draw player texture
-	this.texture.draw();
+	this.sprite.draw();
 };
 
 /******************
