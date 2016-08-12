@@ -99,9 +99,12 @@ var GameTime = {
 	getTotalGameTime: function () {
 		return GameTime.totalGameTime;
 	},
+	getCurrentGameTime: function () {
+		return new Date().getTime() / 1000;
+	},
 	update: function () {
 		var curTime;
-		curTime					= new Date().getTime() / 1000;
+		curTime					= GameTime.getCurrentGameTime();
 		GameTime.elapsed		= curTime - GameTime.lastUpdate;
 		GameTime.totalGameTime	= curTime - GameTime.startTime;
 		GameTime.lastUpdate		= curTime;
@@ -294,28 +297,94 @@ Sprite.prototype.draw = function () {
 ****************************/
 function Animation (path, pos, frameSize, sheetWidth, animationSeq, speed, dir) {
 	this.img 				= document.createElement('img');
-	this.path 				= path;
+	this.img.setAttribute('src', path);
+	this.frameSize 			= frameSize;
+	this.sheetWidth 		= sheetWidth;
 	this.pos 				= pos;
-	this.frameSize			= frameSize;
-	this.sheetWidth			= sheetWidth;
-	this.animationSeq		= animationSeq;
-	this.speed 				= speed;
 	this.dir 				= dir;
-	this.clip 				= new Rectangle(0, (this.animationSeq * this.frameSize), this.frameSize, this.frameSize);
+	this.clip 				= {left: 0, top: (animationSeq * this.frameSize), right: this.frameSize, bottom: this.frameSize};
 	this.frameCount 		= 0;
 	this.totalFrames 		= this.sheetWidth / this.frameSize;
 	this.previousFrameTime	= 0;
-	this.img.setAttribute('src', this.path);
+	this.speed 				= speed;
 }
 
 Animation.prototype.update = function (pos, animationSeq, speed) {
 	this.pos 				= pos;
-	this.clip		 		= new Rectangle(0, (animationSeq * this.frameSize), this.frameSize, this.frameSize);
+	this.clip.top	 		= animationSeq * this.frameSize;
 	this.speed 				= speed;
 };
 
 Animation.prototype.animate = function (frameTime) {
-	//this.previousFrameTime = 0;
+	// Set the previous frame time to the current time (frameTime) if this is the first go around
+	this.previousFrameTime = (this.previousFrameTime === 0) ? frameTime : this.previousFrameTime;
+	// At a set interval (this.speed), switch frames
+	if ((frameTime - this.previousFrameTime) >= this.speed) {
+		this.clip.left 	= this.frameSize * this.frameCount;
+		this.clip.right = (this.frameSize * this.frameCount) + this.frameSize;
+		// Advance a frame
+		this.frameCount = (this.frameCount === (this.totalFrames - 1)) ? 0 : this.frameCount + 1;
+		// Set the new previous frame time
+		this.previousFrameTime = frameTime;
+	}
+
+};
+
+Animation.prototype.draw = function () {
+	var frameTime;
+	frameTime = new Date().getTime() / 1000;
+	this.animate(frameTime);
+
+	main.context.drawImage(this.img, this.clip.left, this.clip.top, this.frameSize, this.clip.bottom, this.pos.x, this.pos.y, this.frameSize, this.frameSize);
+};
+
+/*****************************
+*****  TRANSITION CLASS  *****
+*****************************/
+function Transition (game, type, duration, nextState, isFadingIn, isFadingOut, disposeFunc) {
+	this.game 			= game;
+	this.tranBG 		= {};
+	this.type 			= type;
+	this.duration		= duration;
+	this.nextState		= nextState;
+	this.isFadingIn 	= isFadingIn;
+	this.isFadingOut 	= isFadingOut;
+	this.startTime		= GameTime.getCurrentGameTime();
+	this.state 			= '';
+	this.isFinished		= false;
+	this.drawText 		= '';
+}
+
+Transition.prototype.Initialize = function () {
+	this.tranBG 	= new Texture(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#000000', 1, '#000000');
+	this.state 		= (this.isFadingIn) ? 'FADE IN' : 'MAIN';
+};
+
+Transition.prototype.update = function () {
+	
+	// if (state === 'FADE IN' && (GameTime.getCurrentGameTime() - this.startTime) < 2) {
+
+
+
+	// } 
+
+
+	if ((GameTime.getCurrentGameTime() - this.startTime) < this.duration) {
+		this.drawText 	= 'LOADING...';
+	} else {
+		this.isFinished = true;
+		this.game.ChangeState(this.nextState);
+		// this.drawText 	= 'PRESS ESCAPE....';
+	}
+
+	if (this.isFinished && Input.Keys.GetKey(Input.Keys.ESCAPE))
+		this.game.ChangeState(this.nextState);
+
+};
+
+Transition.prototype.draw = function () {
+	this.tranBG.draw();
+	DrawText(this.drawText, (main.CANVAS_WIDTH / 2) - 75, (main.CANVAS_HEIGHT / 2) - 10, 'normal 20pt Trebuchet MS, Verdana', '#FFFFFF');
 };
 
 /************************
@@ -383,7 +452,8 @@ function Player (level) {
 
 	// this.texture				= new Circle(this.pos, this.radius, 'red');
 	//this.texture 				= new Texture(this.pos, this.size, 'rgba(197, 27, 32, 0.7)', 1, 'rgb(197, 27, 32)');
-	this.sprite					= new Sprite('images/player/small/Idle__000.png', this.pos, this.size);
+	// this.sprite					= new Sprite('images/player/small/Idle__000.png', this.pos, this.size);
+	this.sprite					= new Animation('images/player/small/SpriteSheet_IDLE.png', this.pos, 50, 500, 0, 0.3, 1);
 }
 
 Player.prototype.Clamp = function (value, min, max) {
@@ -580,7 +650,8 @@ Player.prototype.update = function (gameTime) {
 	}
 
 	// Update the player
-	this.sprite.update(this.pos);
+	// this.sprite.update(this.pos);
+	this.sprite.update(this.pos, 0, 0.3);
 
 	this.movement	= 0;
 	this.movementX	= 0;
@@ -786,7 +857,7 @@ Level.prototype.update = function () {
 
 	if (!this.isEscapeLocked && Input.Keys.GetKey(Input.Keys.ESCAPE)) {
 		this.isEscapeLocked = true;
-		this.game.ChangeState('MAIN MENU');
+		this.game.ChangeState('TRANSITION', {nextState: 'MAIN MENU'});
 	}
 };
 
@@ -834,7 +905,7 @@ MainMenu.prototype.update = function () {
 		this.playColor = '#F11B2B';
 		if (!this.isLeftClickLocked && Input.Mouse.GetButton(Input.Mouse.LEFT)) {
 			this.isLeftClickLocked = true;
-			this.game.ChangeState('GAME');
+			this.game.ChangeState('TRANSITION', {nextState: 'GAME', fadeIn: true, fadeOut: true, disposeFunc: this.Dispose});
 		}
 	} else {
 		this.playColor = '#FFFFFF';
@@ -859,6 +930,7 @@ function Game () {
 	this.state 					= 'MAIN MENU';
 	this.mainMenu				= undefined;
 	this.level					= undefined;
+	this.transition 			= undefined;
 
 	// Initialize GameTime
 	GameTime.update();
@@ -867,8 +939,24 @@ function Game () {
 	this.ChangeState('MAIN MENU');
 }
 
-Game.prototype.ChangeState = function (state) {
-	if (state === 'MAIN MENU') {
+/*
+
+TRANSITIONS:
+
+The transition state will be separate from the game states because I want transitions to be able to
+run simultaneously. I'll add a callback-like argument that will take care of disposing the previous
+object.
+
+*/
+
+Game.prototype.ChangeState = function (state, transition) {
+	
+	if (typeof transition !== 'undefined') {
+
+		this.transition = new Transition(this, 'blah', 5, transition.nextState, transition.fadeIn, transition.fadeOut, transition.disposeFunc);	//game, type, duration, transition (object)
+		this.transition.Initialize();
+
+	} else 	if (state === 'MAIN MENU') {
 		if (typeof this.level !== 'undefined') {
 			this.level.Dispose();
 			this.level = undefined;
@@ -884,24 +972,46 @@ Game.prototype.ChangeState = function (state) {
 		this.level.Initialize();
 	}
 
+
+
+	/*else if (state === 'TRANSITION') {
+		if (!trans.fadeIn) {
+			if (typeof this.mainMenu !== 'undefined') {
+				this.mainMenu.Dispose();
+				this.mainMenu = undefined;
+			} else if (typeof this.level !== 'undefined') {
+				this.level.Dispose();
+				this.level = undefined;
+			}
+		}
+		this.transition = new Transition(this, 'blah', 5, trans.nextState, trans.fadeIn, trans.fadeOut, trans.disposeFunc);	//game, type, duration, transition (object)
+		this.transition.Initialize();
+	}*/
+
 	this.state = state;
 };
 
 Game.prototype.update = function () {
 	this.fps = fps.getFPS();
 
-	if (this.state === 'MAIN MENU')
+	if (this.state === 'MAIN MENU') {
 		this.mainMenu.update();
-	else 
+	} else if (this.state === 'GAME') { 
 		this.level.update();
+	} else if (this.state === 'TRANSITION') {
+		this.transition.update();
+	}
 };
 
 Game.prototype.draw = function () {
 	main.context.clearRect(0, 0, main.CANVAS_WIDTH, main.CANVAS_HEIGHT);
-	if (this.state === 'MAIN MENU')
+	if (this.state === 'MAIN MENU') {
 		this.mainMenu.draw();
-	else 
+	} else if (this.state === 'GAME') { 
 		this.level.draw();
+	} else if (this.state === 'TRANSITION') {
+		this.transition.draw();
+	}
 
 	DrawText('FPS: ' + this.fps, (main.CANVAS_WIDTH / 2 - 50), 20, 'normal 14pt Consolas, Trebuchet MS, Verdana', '#FFFFFF');
 };
