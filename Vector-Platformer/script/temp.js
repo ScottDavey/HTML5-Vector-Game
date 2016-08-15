@@ -296,32 +296,36 @@ Sprite.prototype.draw = function () {
 *****  ANIMATION CLASS  *****
 ****************************/
 function Animation (path, pos, frameSize, sheetWidth, animationSeq, speed, dir) {
+	// this.img				= $('<img />').attr({'src': path});
+	// this.img				= this.img[0];
 	this.img 				= document.createElement('img');
 	this.img.setAttribute('src', path);
-	this.frameSize 			= frameSize;
-	this.sheetWidth 		= sheetWidth;
-	this.pos 				= pos;
-	this.dir 				= dir;
-	this.clip 				= {left: 0, top: (animationSeq * this.frameSize), right: this.frameSize, bottom: this.frameSize};
-	this.frameCount 		= 0;
-	this.totalFrames 		= this.sheetWidth / this.frameSize;
+	this.frameSize			= frameSize;
+	this.sheetWidth			= sheetWidth;
+	this.pos				= pos;
+	this.dir				= dir;
+	this.clip				= {'left': 0, 'top': (animationSeq * this.frameSize), 'right': this.frameSize, 'bottom': this.frameSize};
+	this.frameCount			= 0;
+	this.totalFrames		= this.sheetWidth / this.frameSize;
 	this.previousFrameTime	= 0;
-	this.speed 				= speed;
+	this.speed				= speed;
 }
 
 Animation.prototype.update = function (pos, animationSeq, speed) {
-	this.pos 				= pos;
-	this.clip.top	 		= animationSeq * this.frameSize;
-	this.speed 				= speed;
+	this.pos 		= pos;
+	this.clip.top	= animationSeq * this.frameSize;
+	this.speed		= speed;
 };
 
 Animation.prototype.animate = function (frameTime) {
+
 	// Set the previous frame time to the current time (frameTime) if this is the first go around
 	this.previousFrameTime = (this.previousFrameTime === 0) ? frameTime : this.previousFrameTime;
-	// At a set interval (this.speed), switch frames
+	// Every 0.5 seconds, switch frames
 	if ((frameTime - this.previousFrameTime) >= this.speed) {
+		
 		this.clip.left 	= this.frameSize * this.frameCount;
-		this.clip.right = (this.frameSize * this.frameCount) + this.frameSize;
+		this.clip.right	= (this.frameSize * this.frameCount) + this.frameSize;
 		// Advance a frame
 		this.frameCount = (this.frameCount === (this.totalFrames - 1)) ? 0 : this.frameCount + 1;
 		// Set the new previous frame time
@@ -331,11 +335,15 @@ Animation.prototype.animate = function (frameTime) {
 };
 
 Animation.prototype.draw = function () {
-	var frameTime;
-	frameTime = new Date().getTime() / 1000;
+	var d, frameTime;
+	// Get a snap shot of the time in seconds
+	d = new Date();
+	frameTime = d.getTime() / 1000;
 	this.animate(frameTime);
 
+	// Image, BG Start X, BG Start Y, BG End X, BG End Y, Pos X, Pos Y, Stretch X, Stretch Y
 	main.context.drawImage(this.img, this.clip.left, this.clip.top, this.frameSize, this.clip.bottom, this.pos.x, this.pos.y, this.frameSize, this.frameSize);
+
 };
 
 /*****************************
@@ -439,6 +447,8 @@ function Player (level) {
 	this.MaxFallSpeed			= 900.0;
 	this.JumpControlPower		= 0.14;
 	// States
+	this.state 					= 'IDLE';
+	this.dir 					= 'RIGHT';
 	this.isOnGround				= false;
 	this.isJumping				= false;
 	this.wasJumping				= false;
@@ -450,10 +460,10 @@ function Player (level) {
 	this.waterSplash			= new Sound('sounds/SFX_Water_Splash.mp3', false, true, false, 0.7);
 	this.waterSwim				= new Sound('sounds/SFX_Water_Swim.mp3', false, true, false, 0.5);
 
-	// this.texture				= new Circle(this.pos, this.radius, 'red');
-	//this.texture 				= new Texture(this.pos, this.size, 'rgba(197, 27, 32, 0.7)', 1, 'rgb(197, 27, 32)');
 	// this.sprite					= new Sprite('images/player/small/Idle__000.png', this.pos, this.size);
-	this.sprite					= new Animation('images/player/small/SpriteSheet_IDLE.png', this.pos, 50, 500, 0, 0.3, 1);
+	this.idleSprite				= new Animation('images/player/small/SpriteSheet_IDLE.png', this.pos, 50, 500, 0, 0.9);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
+	this.runSprite_Left			= new Animation('images/player/small/SpriteSheet_RUN_LEFT.png', this.pos, 50, 500, 0, 0.05);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
+	this.runSprite_Right		= new Animation('images/player/small/SpriteSheet_RUN_RIGHT.png', this.pos, 50, 500, 0, 0.05);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
 }
 
 Player.prototype.Clamp = function (value, min, max) {
@@ -470,9 +480,11 @@ Player.prototype.GetInput = function () {
 	if (Input.Keys.GetKey(Input.Keys.A) || Input.Keys.GetKey(Input.Keys.LEFT)) {
 		this.movement 	= -1.0;
 		this.movementX	= -1.0;
+		this.dir = 'LEFT';
 	} else if (Input.Keys.GetKey(Input.Keys.D) || Input.Keys.GetKey(Input.Keys.RIGHT)) {
 		this.movement 	= 1.0;
 		this.movementX	= 1.0;
+		this.dir = 'RIGHT';
 	}
 
 	if (Input.Keys.GetKey(Input.Keys.W) || Input.Keys.GetKey(Input.Keys.UP)) {
@@ -633,6 +645,7 @@ Player.prototype.ApplyPhysics = function (gameTime) {
 };
 
 Player.prototype.update = function (gameTime) {
+	var runSpeed;
 
 	this.GetInput();
 	this.ApplyPhysics(gameTime);
@@ -651,7 +664,19 @@ Player.prototype.update = function (gameTime) {
 
 	// Update the player
 	// this.sprite.update(this.pos);
-	this.sprite.update(this.pos, 0, 0.3);
+	if (this.movement === 0) {
+		this.idleSprite.update(this.pos, 0, 0.2);
+		this.state = 'IDLE';
+	} else {
+		runSpeed = (this.isSwimming) ? 0.2 : 0.03;
+		
+		if (this.dir === 'LEFT') {
+			this.runSprite_Left.update(this.pos, 0, runSpeed);
+		} else {
+			this.runSprite_Right.update(this.pos, 0, runSpeed);
+		}
+		this.state = 'RUNNING';
+	}
 
 	this.movement	= 0;
 	this.movementX	= 0;
@@ -661,7 +686,16 @@ Player.prototype.update = function (gameTime) {
 
 Player.prototype.draw = function () {
 	// Draw player texture
-	this.sprite.draw();
+	// this.sprite.draw();
+	if (this.state === 'IDLE') {
+		this.idleSprite.draw();
+	} else if (this.state === 'RUNNING') {
+		if (this.dir === 'LEFT') {
+			this.runSprite_Left.draw();
+		} else {
+			this.runSprite_Right.draw();
+		}
+	}
 };
 
 /******************
