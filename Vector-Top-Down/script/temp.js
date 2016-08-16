@@ -1,4 +1,4 @@
-/**********************
+temp/**********************
 *****  ULILITIES  *****
 **********************/
 var RectangleExtensions = {
@@ -253,10 +253,6 @@ function Texture (pos, size, fillColor, lineWidth, lineColor)  {
 	this.lineColor	= lineColor;
 }
 
-Texture.prototype.SetColor = function (rgba) {
-	this.fillColor	= rgba;
-};
-
 Texture.prototype.update = function (pos) {
 	this.pos = pos;
 };
@@ -396,7 +392,7 @@ Transition.prototype.update = function () {
 
 Transition.prototype.draw = function () {
 	this.tranBG.draw();
-	DrawText(this.drawText, (main.CANVAS_WIDTH / 2) - 50, (main.CANVAS_HEIGHT / 2) - 10, 'normal 20pt Trebuchet MS, Verdana', '#FFFFFF');
+	DrawText(this.drawText, (main.CANVAS_WIDTH / 2) - 75, (main.CANVAS_HEIGHT / 2) - 10, 'normal 20pt Trebuchet MS, Verdana', '#FFFFFF');
 };
 
 /************************
@@ -736,7 +732,7 @@ Level.prototype.Dispose = function () {
 Level.prototype.LoadLines = function () {
 
 	// WORLD BORDERS
-	// this.lines.push(new Line(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, 0), '#999999', 'CEILING', 1));	//TOP
+	this.lines.push(new Line(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, 0), '#999999', 'CEILING', 1));	//TOP
 	this.lines.push(new Line(new Vector2(main.CANVAS_WIDTH, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#999999', 'WALL', -1));	// RIGHT
 	this.lines.push(new Line(new Vector2(0, main.CANVAS_HEIGHT), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#999999', 'FLOOR', -1)); // BOTTOM
 	this.lines.push(new Line(new Vector2(0, 0), new Vector2(0, main.CANVAS_HEIGHT), '#999999', 'WALL', 1));		// LEFT
@@ -923,11 +919,6 @@ function MainMenu (game) {
 	this.playRectTxt		= new Texture(new Vector2(this.playRect.left, this.playRect.top), new Vector2(this.playRect.right-this.playRect.left, this.playRect.bottom-this.playRect.top), 'transparent', 1, '#222222');
 	this.isLeftClickLocked	= false;
 	this.menuMusic			= new Sound('sounds/MUSIC_Ori-and-the-Blind_Forest_Inspiriting.mp3', true, true, false, 0.5);
-	this.isFadingOut		= false;
-	this.fadeOutAlpha		= 0;
-	this.fadeOutIntStart	= 0;
-	this.fadeOutInterval	= 0.1;
-	this.fadeOutTexture		= new Texture(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), 'rgba(0, 0, 0, ' + this.fadeOutAlpha + ')', 1, 'black');
 }
 
 MainMenu.prototype.Initialize = function () {
@@ -947,26 +938,11 @@ MainMenu.prototype.update = function () {
 	if (mouseMoveX > this.playRect.left && mouseMoveX < this.playRect.right && mouseMoveY > this.playRect.top && mouseMoveY < this.playRect.bottom) {
 		this.playColor = '#F11B2B';
 		if (!this.isLeftClickLocked && Input.Mouse.GetButton(Input.Mouse.LEFT)) {
-			this.isLeftClickLocked 	= true;
-			this.isFadingOut		= true;
-			this.fadeOutIntStart	= GameTime.getCurrentGameTime();
+			this.isLeftClickLocked = true;
+			this.game.ChangeState('TRANSITION', {nextState: 'GAME', fadeIn: true, fadeOut: true, disposeFunc: this.Dispose});
 		}
 	} else {
 		this.playColor = '#FFFFFF';
-	}
-
-	if (this.isFadingOut) {
-
-		if (this.fadeOutAlpha < 1) {
-			if ((GameTime.getCurrentGameTime() - this.fadeOutIntStart).toFixed(1) == this.fadeOutInterval) {
-				this.fadeOutAlpha += 0.05;
-				this.fadeOutTexture.SetColor('rgba(0, 0, 0, ' + this.fadeOutAlpha + ')');
-				this.fadeOutIntStart	= GameTime.getCurrentGameTime();
-			}
-		} else {
-			this.game.ChangeState('TRANSITION', {nextState: 'GAME', fadeIn: true, fadeOut: true, disposeFunc: this.Dispose});
-		}
-
 	}
 
 };
@@ -977,7 +953,6 @@ MainMenu.prototype.draw = function () {
 	DrawText('HTMl5 VECTOR PLATFORMER', (main.CANVAS_WIDTH / 2 - 375), 150, 'normal 44pt Trebuchet MS, Verdana', '#C51B20');
 	DrawText('A Platforming Game', (main.CANVAS_WIDTH / 2 - 150), 190, 'normal 22pt Century Gothic, Verdana', '#FFFFFF');
 	DrawText('PLAY', (main.CANVAS_WIDTH / 2 - 35), (main.CANVAS_HEIGHT - 100), 'bold 18pt Verdana', this.playColor);
-	if (this.isFadingOut) this.fadeOutTexture.draw();
 };
 
 /***********************
@@ -1012,7 +987,7 @@ Game.prototype.ChangeState = function (state, transition) {
 	
 	if (typeof transition !== 'undefined') {
 
-		this.transition = new Transition(this, 'blah', 3, transition.nextState, transition.fadeIn, transition.fadeOut, transition.disposeFunc);	//game, type, duration, transition (object)
+		this.transition = new Transition(this, 'blah', 5, transition.nextState, transition.fadeIn, transition.fadeOut, transition.disposeFunc);	//game, type, duration, transition (object)
 		this.transition.Initialize();
 
 	} else 	if (state === 'MAIN MENU') {
