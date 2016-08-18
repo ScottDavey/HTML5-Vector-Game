@@ -1,4 +1,4 @@
-temp/**********************
+/**********************
 *****  ULILITIES  *****
 **********************/
 var RectangleExtensions = {
@@ -346,84 +346,6 @@ Animation.prototype.draw = function () {
 
 };
 
-/*****************************
-*****  TRANSITION CLASS  *****
-*****************************/
-function Transition (game, type, duration, nextState, isFadingIn, isFadingOut, disposeFunc) {
-	this.game 			= game;
-	this.tranBG 		= {};
-	this.type 			= type;
-	this.duration		= duration;
-	this.nextState		= nextState;
-	this.isFadingIn 	= isFadingIn;
-	this.isFadingOut 	= isFadingOut;
-	this.startTime		= GameTime.getCurrentGameTime();
-	this.state 			= '';
-	this.isFinished		= false;
-	this.drawText 		= '';
-}
-
-Transition.prototype.Initialize = function () {
-	this.tranBG 	= new Texture(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#000000', 1, '#000000');
-	this.state 		= (this.isFadingIn) ? 'FADE IN' : 'MAIN';
-};
-
-Transition.prototype.update = function () {
-	
-	// if (state === 'FADE IN' && (GameTime.getCurrentGameTime() - this.startTime) < 2) {
-
-
-
-	// } 
-
-
-	if ((GameTime.getCurrentGameTime() - this.startTime) < this.duration) {
-		this.drawText 	= 'LOADING...';
-	} else {
-		this.isFinished = true;
-		this.game.ChangeState(this.nextState);
-		// this.drawText 	= 'PRESS ESCAPE....';
-	}
-
-	if (this.isFinished && Input.Keys.GetKey(Input.Keys.ESCAPE))
-		this.game.ChangeState(this.nextState);
-
-};
-
-Transition.prototype.draw = function () {
-	this.tranBG.draw();
-	DrawText(this.drawText, (main.CANVAS_WIDTH / 2) - 75, (main.CANVAS_HEIGHT / 2) - 10, 'normal 20pt Trebuchet MS, Verdana', '#FFFFFF');
-};
-
-/************************
-*****  SOUND CLASS  *****
-************************/
-function Sound (path, isLooping, preloaded, hasControls, vol) {
-	this.vol			= vol;
-	this.audEl			= document.createElement('audio');
-	this.audEl.volume 	= this.vol;
-	this.audEl.setAttribute('src', path);
-	this.audEl.setAttribute('preload', preloaded);
-	this.audEl.setAttribute('controls', hasControls);
-	if (isLooping) this.audEl.setAttribute('loop', true);
-}
-
-Sound.prototype.Play = function () {
-	this.audEl.play();
-};
-
-Sound.prototype.Stop = function () {
-	this.audEl.pause();
-};
-
-Sound.prototype.SetVolume = function (vol) {
-	this.audEl.volume = vol;
-};
-
-Sound.prototype.IsPlaying = function () {
-	return !this.audEl.paused;
-};
-
 /*******************************************
 **************  PLAYER CLASS  **************
 *******************************************/
@@ -432,38 +354,14 @@ function Player (level) {
 	this.pos 					= new Vector2(20, 275);
 	this.size 					= new Vector2(27, 50);
 	this.velocity				= new Vector2(0, 0);
-	// Horizontal Movement
-	this.movement				= 0;
+	// Movement
 	this.movementX				= 0;
 	this.movementY				= 0;
-	this.MoveAcceleration		= 20000.0;
-	this.MaxMoveSpeed			= 2000.0;
-	this.GroundDragFactor		= 0.58;
-	this.AirDragFactor			= 0.65;
-	// Vertical Movement
-	this.MaxJumpTime			= 0.35;
-	this.JumpLaunchVelocity		= -3000.0;
-	this.GravityAcceleration	= 2000.0;
-	this.MaxFallSpeed			= 900.0;
-	this.JumpControlPower		= 0.14;
-	// States
-	this.state 					= 'IDLE';
-	this.dir 					= 'RIGHT';
-	this.isOnGround				= false;
-	this.isJumping				= false;
-	this.wasJumping				= false;
-	this.jumpTime 				= 0;
-	// WATER
-	this.isSwimming				= false;
-	this.walkingSound_Grass		= new Sound('sounds/SFX_Walking_Grass.mp3', true, true, false, 0.8);
-	this.walkingSound_Wood		= new Sound('sounds/SFX_Walking_Wood.mp3', true, true, false, 0.8);
-	this.waterSplash			= new Sound('sounds/SFX_Water_Splash.mp3', false, true, false, 0.7);
-	this.waterSwim				= new Sound('sounds/SFX_Water_Swim.mp3', false, true, false, 0.5);
-
-	// this.sprite					= new Sprite('images/player/small/Idle__000.png', this.pos, this.size);
-	this.idleSprite				= new Animation('images/player/small/SpriteSheet_IDLE.png', this.pos, 50, 500, 0, 0.9);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
-	this.runSprite_Left			= new Animation('images/player/small/SpriteSheet_RUN_LEFT.png', this.pos, 50, 500, 0, 0.05);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
-	this.runSprite_Right		= new Animation('images/player/small/SpriteSheet_RUN_RIGHT.png', this.pos, 50, 500, 0, 0.05);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
+	this.acceleration			= 5;
+	this.friction				= 0.9;
+	this.moveSpeed				= 2.5
+	
+	this.sprite					= new Texture(this.pos, this.size, 'rgba(0, 0, 0, 0.4)', 1, 'black');
 }
 
 Player.prototype.Clamp = function (value, min, max) {
@@ -478,13 +376,9 @@ Player.prototype.GetInput = function () {
 
 	// Horizontal Movement
 	if (Input.Keys.GetKey(Input.Keys.A) || Input.Keys.GetKey(Input.Keys.LEFT)) {
-		this.movement 	= -1.0;
 		this.movementX	= -1.0;
-		this.dir = 'LEFT';
 	} else if (Input.Keys.GetKey(Input.Keys.D) || Input.Keys.GetKey(Input.Keys.RIGHT)) {
-		this.movement 	= 1.0;
 		this.movementX	= 1.0;
-		this.dir = 'RIGHT';
 	}
 
 	if (Input.Keys.GetKey(Input.Keys.W) || Input.Keys.GetKey(Input.Keys.UP)) {
@@ -501,9 +395,6 @@ Player.prototype.HandleCollision = function () {
 	var bounds, i, line, b, slope, y, xDiff, water, shouldPlayWalkSound, waterIntersect;
 
 	bounds				= new Rectangle(this.pos.x, this.pos.y, this.size.x, this.size.y);
-	water				= (typeof this.level.waterRect !== 'undefined') ? this.level.waterRect : '';
-	this.isOnGround 	= false;
-	shouldPlayWalkSound = false;
 
 	// Lines
 	for (i = 0; i < this.level.lines.length; i++) {
@@ -540,73 +431,10 @@ Player.prototype.HandleCollision = function () {
 
 	}
 
-	waterIntersect = RectangleExtensions.GetIntersectionDepth(bounds, water);
-
-	if (waterIntersect.x != 0 && waterIntersect.y != 0) {
-		// WE'RE SWIMMING!
-		if (!this.isSwimming) {
-			this.velocity.y = 0.5;
-			this.isSwimming = true;
-			this.waterSplash.Play();
-		}
-		this.GroundDragFactor		= 0.1;
-		this.AirDragFactor			= 0.2;
-		this.GravityAcceleration	= 250.0;
-		this.MaxFallSpeed			= 100.0;
-		this.JumpControlPower		= 0.13;
-
-		if ((this.pos.y - water.top - 10) <= 0) {
-			this.JumpLaunchVelocity	= -750.0;
-		} else {
-			this.JumpLaunchVelocity	= -500.0;
-		}
-	} else if (this.isSwimming) {
-		this.GroundDragFactor		= 0.58;
-		this.AirDragFactor			= 0.65;
-		this.JumpLaunchVelocity		= -3000.0;
-		this.GravityAcceleration	= 2000.0;
-		this.MaxFallSpeed			= 900.0;
-		this.JumpControlPower		= 0.14;
-		this.isSwimming				= false;
-	}
-
-};
-
-Player.prototype.Jump = function (velY) {
-
-	if (this.isJumping) {
-
-		if (!this.isSwimming) {
-			if ((!this.wasJumping && this.isOnGround) || this.jumpTime > 0) {
-
-				if (this.jumpTime == 0 && this.isSwimming)
-					this.waterSwim.Play();
-
-				this.jumpTime += GameTime.getElapsed();
-
-			}
-
-			if (0 < this.jumpTime && this.jumpTime <= this.MaxJumpTime) {
-				velY = this.JumpLaunchVelocity * (1 - Math.pow(this.jumpTime / this.MaxJumpTime, this.JumpControlPower));
-			} else {
-				this.jumpTime = 0;
-			}
-		} else {
-			velY = this.JumpLaunchVelocity * (1 - Math.pow(this.jumpTime / this.MaxJumpTime, this.JumpControlPower));
-		}
-
-	} else {
-		this.jumpTime = 0;
-	}
-
-	this.wasJumping = this.isJumping;
-
-	return velY;
-
 };
 
 Player.prototype.ApplyPhysics = function (gameTime) {
-	/*this.velocity.x += this.movementX * this.acceleration;
+	this.velocity.x += this.movementX * this.acceleration;
 	this.velocity.y += this.movementY * this.acceleration;
 
 	this.velocity.x *= this.friction;
@@ -619,29 +447,7 @@ Player.prototype.ApplyPhysics = function (gameTime) {
 	this.pos.y += this.velocity.y;
 	this.pos	= new Vector2(Math.round(this.pos.x), Math.round(this.pos.y));
 
-	this.HandleCollision();*/
-
-	var moveSpeed, elapsed;
-	moveSpeed 	= (Input.Keys.GetKey(Input.Keys.SHIFT)) ? this.runSpeed : this.walkSpeed;
-	elapsed 	= GameTime.getElapsed();
-
-	this.velocity.x 	= this.movement * this.MoveAcceleration * elapsed;
-	this.velocity.y 	= this.Clamp(this.velocity.y + this.GravityAcceleration * elapsed, -this.MaxFallSpeed, this.MaxFallSpeed);
-	this.velocity.y 	= this.Jump(this.velocity.y);
-
-	if (this.isOnGround)
-		this.velocity.x *= this.GroundDragFactor;
-	else
-		this.velocity.x *= this.AirDragFactor;
-
-	this.velocity.x 	= this.Clamp(this.velocity.x, -this.MaxMoveSpeed, this.MaxMoveSpeed);
-
-	this.pos.x 			+= this.velocity.x * elapsed;
-	this.pos.y 			+= this.velocity.y * elapsed;
-	this.pos 			= new Vector2(Math.round(this.pos.x), Math.round(this.pos.y));
-
 	this.HandleCollision();
-
 };
 
 Player.prototype.update = function (gameTime) {
@@ -650,35 +456,9 @@ Player.prototype.update = function (gameTime) {
 	this.GetInput();
 	this.ApplyPhysics(gameTime);
 
-	// Play waling sounds
-	if (this.isOnGround && Math.round(this.velocity.x) !== 0 && !this.isSwimming) {
-		if (this.groundType === 'GRASS' && !this.walkingSound_Grass.IsPlaying()) {
-			this.walkingSound_Grass.Play();
-		} else if (this.groundType === 'WOOD') {
-			this.walkingSound_Wood.Play();
-		}
-	} else {
-		this.walkingSound_Grass.Stop();
-		this.walkingSound_Wood.Stop();
-	}
-
 	// Update the player
-	// this.sprite.update(this.pos);
-	if (this.movement === 0) {
-		this.idleSprite.update(this.pos, 0, 0.2);
-		this.state = 'IDLE';
-	} else {
-		runSpeed = (this.isSwimming) ? 0.2 : 0.03;
-		
-		if (this.dir === 'LEFT') {
-			this.runSprite_Left.update(this.pos, 0, runSpeed);
-		} else {
-			this.runSprite_Right.update(this.pos, 0, runSpeed);
-		}
-		this.state = 'RUNNING';
-	}
-
-	this.movement	= 0;
+	this.sprite.update(this.pos);
+	
 	this.movementX	= 0;
 	this.movementY	= 0;
 
@@ -686,16 +466,7 @@ Player.prototype.update = function (gameTime) {
 
 Player.prototype.draw = function () {
 	// Draw player texture
-	// this.sprite.draw();
-	if (this.state === 'IDLE') {
-		this.idleSprite.draw();
-	} else if (this.state === 'RUNNING') {
-		if (this.dir === 'LEFT') {
-			this.runSprite_Left.draw();
-		} else {
-			this.runSprite_Right.draw();
-		}
-	}
+	this.sprite.draw();
 };
 
 /******************
@@ -703,30 +474,19 @@ Player.prototype.draw = function () {
 ******************/
 function Level (game) {
 	this.game 				= game;
-	this.levelBG			= {};
 	this.lines				= [];
-	this.waterRect			= {};
 	this.player				= {};
-	this.music				= {};
 	this.escapeLocked		= false;
 }
 
 Level.prototype.Initialize = function () {
-	this.levelBG	= new Sprite('images/LEVEL_4_Sized.jpg', new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT));
-	this.waterRect	= new Rectangle(0, 374, 1280, 346);	// LEVEL 4
 	this.player		= new Player(this);
-	this.music		= new Sound('sounds/MUSIC_The-Forgotten_Forest.mp3', true, true, false, 0.2);
 	this.LoadLines();
-	this.music.Play();
 };
 
 Level.prototype.Dispose = function () {
-	this.music.Stop();
-	this.levelBG			= {};
 	this.lines				= [];
-	this.waterRect			= {};	// LEVEL 4
 	this.player				= {};
-	this.music				= {};
 };
 
 Level.prototype.LoadLines = function () {
@@ -737,222 +497,28 @@ Level.prototype.LoadLines = function () {
 	this.lines.push(new Line(new Vector2(0, main.CANVAS_HEIGHT), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#999999', 'FLOOR', -1)); // BOTTOM
 	this.lines.push(new Line(new Vector2(0, 0), new Vector2(0, main.CANVAS_HEIGHT), '#999999', 'WALL', 1));		// LEFT
 
-	// GROUND/WALL/CEILING
-	this.lines.push(new Line(new Vector2(0, 326), new Vector2(6, 328), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(6, 328), new Vector2(16, 324), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(16, 324), new Vector2(39, 326), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(39, 326), new Vector2(61, 325), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(61, 325), new Vector2(80, 322), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(80, 322), new Vector2(146, 328), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(146, 328), new Vector2(154, 326), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(154, 326), new Vector2(186, 336), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(186, 336), new Vector2(215, 333), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(214, 333), new Vector2(225, 337), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(225, 337), new Vector2(239, 337), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(239, 337), new Vector2(245, 337), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(245, 337), new Vector2(255, 343), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(254, 342), new Vector2(261, 343), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(261, 343), new Vector2(273, 351), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(273, 351), new Vector2(281, 347), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(281, 347), new Vector2(302, 352), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(302, 352), new Vector2(314, 363), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(308, 388), new Vector2(314, 363), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(308, 388), new Vector2(308, 429), "#02AA30", "WALL", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(290, 444), new Vector2(308, 429), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(290, 444), new Vector2(307, 457), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(307, 457), new Vector2(312, 475), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(312, 475), new Vector2(326, 492), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(326, 492), new Vector2(350, 546), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(350, 546), new Vector2(360, 538), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(360, 538), new Vector2(383, 535), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(383, 535), new Vector2(406, 539), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(406, 539), new Vector2(425, 549), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(425, 549), new Vector2(443, 565), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(443, 565), new Vector2(454, 578), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(454, 578), new Vector2(467, 584), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(467, 584), new Vector2(480, 582), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(480, 582), new Vector2(494, 575), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(494, 575), new Vector2(506, 574), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(506, 574), new Vector2(522, 576), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(522, 576), new Vector2(552, 588), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(552, 588), new Vector2(581, 583), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(581, 583), new Vector2(592, 569), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(592, 569), new Vector2(605, 561), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(605, 561), new Vector2(622, 558), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(622, 558), new Vector2(638, 561), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(638, 561), new Vector2(645, 569), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(645, 569), new Vector2(665, 574), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(665, 574), new Vector2(673, 562), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(673, 562), new Vector2(699, 557), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(699, 557), new Vector2(703, 564), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(703, 564), new Vector2(724, 577), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(724, 577), new Vector2(728, 585), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(728, 585), new Vector2(787, 588), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(787, 588), new Vector2(791, 578), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(791, 578), new Vector2(811, 567), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(811, 567), new Vector2(820, 577), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(820, 577), new Vector2(853, 583), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(853, 583), new Vector2(855, 588), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(855, 588), new Vector2(870, 589), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(870, 589), new Vector2(883, 577), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(882, 577), new Vector2(893, 577), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(893, 577), new Vector2(903, 583), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(903, 583), new Vector2(935, 566), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(935, 566), new Vector2(953, 555), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(953, 555), new Vector2(972, 538), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(972, 538), new Vector2(973, 525), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(973, 525), new Vector2(984, 511), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(984, 511), new Vector2(1000, 507), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(1000, 368), new Vector2(1000, 507), "#02AA30", "WALL", -1, "NONE"));
-	this.lines.push(new Line(new Vector2(968, 365), new Vector2(1000, 368), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(919, 356), new Vector2(968, 365), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(896, 354), new Vector2(919, 356), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(860, 361), new Vector2(896, 354), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(828, 403), new Vector2(860, 361), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(790, 475), new Vector2(828, 403), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(729, 463), new Vector2(790, 475), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(671, 487), new Vector2(727, 462), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(638, 487), new Vector2(671, 487), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(619, 479), new Vector2(638, 487), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(609, 473), new Vector2(619, 479), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(584, 475), new Vector2(609, 473), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(566, 466), new Vector2(584, 475), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(564, 455), new Vector2(566, 466), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(545, 463), new Vector2(564, 455), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(504, 467), new Vector2(545, 463), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(504, 455), new Vector2(504, 467), "#02AA30", "WALL", -1, "NONE"));
-	this.lines.push(new Line(new Vector2(504, 455), new Vector2(531, 449), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(531, 388), new Vector2(531, 449), "#02AA30", "WALL", -1, "NONE"));
-	this.lines.push(new Line(new Vector2(522, 379), new Vector2(531, 388), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(522, 339), new Vector2(522, 379), "#02AA30", "WALL", -1, "NONE"));
-	this.lines.push(new Line(new Vector2(522, 339), new Vector2(535, 336), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(535, 336), new Vector2(546, 325), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(546, 325), new Vector2(562, 321), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(562, 321), new Vector2(587, 323), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(587, 323), new Vector2(650, 323), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(650, 323), new Vector2(683, 320), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(683, 320), new Vector2(711, 314), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(711, 314), new Vector2(737, 314), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(737, 314), new Vector2(764, 322), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(764, 322), new Vector2(822, 326), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(822, 326), new Vector2(867, 296), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(867, 296), new Vector2(915, 272), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(915, 272), new Vector2(941, 262), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(941, 262), new Vector2(1008, 250), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(1008, 157), new Vector2(1008, 250), "#02AA30", "WALL", -1, "NONE"));
-	this.lines.push(new Line(new Vector2(1008, 157), new Vector2(1020, 146), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(1020, 146), new Vector2(1054, 135), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(1054, 135), new Vector2(1066, 138), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(1066, 138), new Vector2(1075, 134), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(1075, 134), new Vector2(1095, 132), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(1095, 132), new Vector2(1127, 132), "#9F0313", "FLOOR", -1, "WOOD"));
-	this.lines.push(new Line(new Vector2(1127, 132), new Vector2(1127, 160), "#02AA30", "WALL", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(1127, 160), new Vector2(1171, 161), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(1171, 161), new Vector2(1195, 167), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(1195, 167), new Vector2(1227, 173), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(1227, 173), new Vector2(1241, 176), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(1241, 176), new Vector2(1270, 171), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(1270, 171), new Vector2(1279, 170), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(1008, 0), new Vector2(1008, 50), "#02AA30", "WALL", -1, "NONE"));
-	this.lines.push(new Line(new Vector2(1008, 50), new Vector2(1041, 62), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(1041, 62), new Vector2(1052, 63), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(1052, 63), new Vector2(1067, 53), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(1067, 53), new Vector2(1079, 63), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(1079, 63), new Vector2(1111, 63), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(1111, 1), new Vector2(1111, 63), "#02AA30", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(241, 252), new Vector2(444, 138), "#9F0313", "FLOOR", -1, "GRASS"));
+	this.lines.push(new Line(new Vector2(444, 138), new Vector2(605, 288), "#9F0313", "FLOOR", -1, "GRASS"));
+	this.lines.push(new Line(new Vector2(391, 415), new Vector2(604, 286), "#0E72D5", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(243, 254), new Vector2(391, 415), "#0E72D5", "CEILING", 1, "NONE"));
 
-};
-
-Level.prototype.LoadGrid = function () {
-	var recSize = new Vector2(256, 295);
-	//pos, size, fillColor, lineWidth, lineColor //256x295
-	this.grid.push(new Texture(new Vector2(0, 0), recSize, 'transparent', 1, 'black'));
-	this.grid.push(new Texture(new Vector2(256, 0), recSize, 'transparent', 1, 'black'));
-	this.grid.push(new Texture(new Vector2(512, 0), recSize, 'transparent', 1, 'black'));
-	this.grid.push(new Texture(new Vector2(768, 0), recSize, 'transparent', 1, 'black'));
-
-	this.grid.push(new Texture(new Vector2(0, 295), recSize, 'transparent', 1, 'black'));
-	this.grid.push(new Texture(new Vector2(256, 295), recSize, 'transparent', 1, 'black'));
-	this.grid.push(new Texture(new Vector2(512, 295), recSize, 'transparent', 1, 'black'));
-	this.grid.push(new Texture(new Vector2(768, 295), recSize, 'transparent', 1, 'black'));
-};
-
-Level.prototype.DrawText = function (string, x, y, font, color) {
-	main.context.save();
-	main.context.font = font;
-	main.context.fillStyle = color;
-	main.context.fillText(string, x, y);
-	main.context.restore();
 };
 
 Level.prototype.update = function () {
 
 	this.player.update();
-
-	if (!this.isEscapeLocked && Input.Keys.GetKey(Input.Keys.ESCAPE)) {
-		this.isEscapeLocked = true;
-		this.game.ChangeState('TRANSITION', {nextState: 'MAIN MENU'});
-	}
 };
 
 Level.prototype.draw = function () {
-	var l, g;
-
-	// Draw Level BG
-	this.levelBG.draw();
+	var l;
 
 	// Draw Collision Map
-	// for (l = 0; l < this.lines.length; l++) {
-	// 	this.lines[l].draw();
-	// }
+	for (l = 0; l < this.lines.length; l++) {
+		this.lines[l].draw();
+	}
 
 	this.player.draw();
 
-};
-
-function MainMenu (game) {
-	this.game 				= game;
-	this.menuBG 			= new Texture(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#000000', 1, '#000000');
-	// this.centerLine			= new Line(new Vector2(main.CANVAS_WIDTH / 2, 0), new Vector2(main.CANVAS_WIDTH / 2, main.CANVAS_HEIGHT), '#222222', 'NONE', 0, 'NONE'); //startPos, endPos, color, collision, normal, sound
-	this.playColor			= '#FFFFFF';
-	this.playRect 			= new Rectangle(main.CANVAS_WIDTH / 2 - 35, main.CANVAS_HEIGHT - 125, 71, 30);
-	this.playRectTxt		= new Texture(new Vector2(this.playRect.left, this.playRect.top), new Vector2(this.playRect.right-this.playRect.left, this.playRect.bottom-this.playRect.top), 'transparent', 1, '#222222');
-	this.isLeftClickLocked	= false;
-	this.menuMusic			= new Sound('sounds/MUSIC_Ori-and-the-Blind_Forest_Inspiriting.mp3', true, true, false, 0.5);
-}
-
-MainMenu.prototype.Initialize = function () {
-	this.menuMusic.Play();
-};
-
-MainMenu.prototype.Dispose = function () {
-	this.menuMusic.Stop();
-};
-
-MainMenu.prototype.update = function () {
-	var mouseMovePos, mouseMoveX, mouseMoveY;
-	mouseMovePos 	= Input.Mouse.OnMouseMove.GetPosition();
-	mouseMoveX 		= mouseMovePos.x;
-	mouseMoveY		= mouseMovePos.y;
-
-	if (mouseMoveX > this.playRect.left && mouseMoveX < this.playRect.right && mouseMoveY > this.playRect.top && mouseMoveY < this.playRect.bottom) {
-		this.playColor = '#F11B2B';
-		if (!this.isLeftClickLocked && Input.Mouse.GetButton(Input.Mouse.LEFT)) {
-			this.isLeftClickLocked = true;
-			this.game.ChangeState('TRANSITION', {nextState: 'GAME', fadeIn: true, fadeOut: true, disposeFunc: this.Dispose});
-		}
-	} else {
-		this.playColor = '#FFFFFF';
-	}
-
-};
-
-MainMenu.prototype.draw = function () {
-	this.menuBG.draw();
-
-	DrawText('HTMl5 VECTOR PLATFORMER', (main.CANVAS_WIDTH / 2 - 375), 150, 'normal 44pt Trebuchet MS, Verdana', '#C51B20');
-	DrawText('A Platforming Game', (main.CANVAS_WIDTH / 2 - 150), 190, 'normal 22pt Century Gothic, Verdana', '#FFFFFF');
-	DrawText('PLAY', (main.CANVAS_WIDTH / 2 - 35), (main.CANVAS_HEIGHT - 100), 'bold 18pt Verdana', this.playColor);
 };
 
 /***********************
@@ -961,92 +527,21 @@ MainMenu.prototype.draw = function () {
 function Game () {
 	this.isRunning				= true;
 	this.fps					= 0;
-	this.state 					= 'MAIN MENU';
-	this.mainMenu				= undefined;
-	this.level					= undefined;
-	this.transition 			= undefined;
+	this.level					= new Level();
 
-	// Initialize GameTime
+	// Initialize
 	GameTime.update();
-
-	// Game Loop
-	this.ChangeState('MAIN MENU');
+	this.level.Initialize();
 }
-
-/*
-
-TRANSITIONS:
-
-The transition state will be separate from the game states because I want transitions to be able to
-run simultaneously. I'll add a callback-like argument that will take care of disposing the previous
-object.
-
-*/
-
-Game.prototype.ChangeState = function (state, transition) {
-	
-	if (typeof transition !== 'undefined') {
-
-		this.transition = new Transition(this, 'blah', 5, transition.nextState, transition.fadeIn, transition.fadeOut, transition.disposeFunc);	//game, type, duration, transition (object)
-		this.transition.Initialize();
-
-	} else 	if (state === 'MAIN MENU') {
-		if (typeof this.level !== 'undefined') {
-			this.level.Dispose();
-			this.level = undefined;
-		}
-		this.mainMenu = new MainMenu(this);
-		this.mainMenu.Initialize();
-	} else if (state === 'GAME') {
-		if (typeof this.mainMenu !== 'undefined') {
-			this.mainMenu.Dispose();
-			this.mainMenu = undefined;
-		}
-		this.level = new Level(this);
-		this.level.Initialize();
-	}
-
-
-
-	/*else if (state === 'TRANSITION') {
-		if (!trans.fadeIn) {
-			if (typeof this.mainMenu !== 'undefined') {
-				this.mainMenu.Dispose();
-				this.mainMenu = undefined;
-			} else if (typeof this.level !== 'undefined') {
-				this.level.Dispose();
-				this.level = undefined;
-			}
-		}
-		this.transition = new Transition(this, 'blah', 5, trans.nextState, trans.fadeIn, trans.fadeOut, trans.disposeFunc);	//game, type, duration, transition (object)
-		this.transition.Initialize();
-	}*/
-
-	this.state = state;
-};
 
 Game.prototype.update = function () {
 	this.fps = fps.getFPS();
-
-	if (this.state === 'MAIN MENU') {
-		this.mainMenu.update();
-	} else if (this.state === 'GAME') { 
-		this.level.update();
-	} else if (this.state === 'TRANSITION') {
-		this.transition.update();
-	}
+	this.level.update();
 };
 
 Game.prototype.draw = function () {
-	main.context.clearRect(0, 0, main.CANVAS_WIDTH, main.CANVAS_HEIGHT);
-	if (this.state === 'MAIN MENU') {
-		this.mainMenu.draw();
-	} else if (this.state === 'GAME') { 
-		this.level.draw();
-	} else if (this.state === 'TRANSITION') {
-		this.transition.draw();
-	}
-
+	main.context.clearRect(0, 0, main.CANVAS_WIDTH, main.CANVAS_HEIGHT);	
+	this.level.draw();
 	DrawText('FPS: ' + this.fps, (main.CANVAS_WIDTH / 2 - 50), 20, 'normal 14pt Consolas, Trebuchet MS, Verdana', '#FFFFFF');
 };
 
@@ -1057,8 +552,8 @@ var main = {
 	init: function () {
 		var wrapper;
 		this.isRunning 				= true;
-		this.CANVAS_WIDTH			= 1280;
-		this.CANVAS_HEIGHT			= 720;
+		this.CANVAS_WIDTH			= 1080;
+		this.CANVAS_HEIGHT			= 540;
 		this.canvas					= document.getElementById('viewport');
 		this.canvas.width			= this.CANVAS_WIDTH;
 		this.canvas.height			= this.CANVAS_HEIGHT;
