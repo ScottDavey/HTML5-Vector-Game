@@ -364,39 +364,44 @@ function Transition (game, type, duration, nextState, isFadingIn, isFadingOut, d
 	this.startTime		= GameTime.getCurrentGameTime();
 	this.state 			= '';
 	this.isFinished		= false;
-	this.drawText 		= '';
+	this.loadingText 	= '';
+	this.footerLine		= new Line(new Vector2(100, main.CANVAS_HEIGHT - 100), new Vector2(main.CANVAS_WIDTH - 100, main.CANVAS_HEIGHT - 100), '#222222', 'NONE', 0, 'NONE');	//startPos, endPos, color, collision, normal, sound
+	this.tipArr			= [
+							["Jump when the time is right.", 120],
+							["Don't break the game or find bugs. If you come across a bug, ignore it and pretend it never happened.", 485],
+							["You cannot walk through a wall. It shouldn't be possible.", 250],
+							["What sorcery is this?", 85]
+						];
+	this.tipText		= '';
+	this.tipTextXOffset	= 0;
 }
 
 Transition.prototype.Initialize = function () {
-	this.tranBG 	= new Texture(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#000000', 1, '#000000');
-	this.state 		= (this.isFadingIn) ? 'FADE IN' : 'MAIN';
+	var rnd = random(0, 3);
+	this.tranBG 		= new Texture(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#000000', 1, '#000000');
+	this.state 			= (this.isFadingIn) ? 'FADE IN' : 'MAIN';
+	this.tipText		= this.tipArr[rnd][0];
+	this.tipTextXOffset	= this.tipArr[rnd][1];
 };
 
 Transition.prototype.update = function () {
 	
-	// if (state === 'FADE IN' && (GameTime.getCurrentGameTime() - this.startTime) < 2) {
-
-
-
-	// } 
-
-
 	if ((GameTime.getCurrentGameTime() - this.startTime) < this.duration) {
-		this.drawText 	= 'LOADING...';
+		this.loadingText 	= 'LOADING...';
 	} else {
 		this.isFinished = true;
 		this.game.ChangeState(this.nextState);
-		// this.drawText 	= 'PRESS ESCAPE....';
 	}
-
-	if (this.isFinished && Input.Keys.GetKey(Input.Keys.ESCAPE))
-		this.game.ChangeState(this.nextState);
 
 };
 
 Transition.prototype.draw = function () {
 	this.tranBG.draw();
-	DrawText(this.drawText, (main.CANVAS_WIDTH / 2) - 50, (main.CANVAS_HEIGHT / 2) - 10, 'normal 20pt Trebuchet MS, Verdana', '#FFFFFF');
+	DrawText(this.loadingText, (main.CANVAS_WIDTH / 2) - 50, (main.CANVAS_HEIGHT / 2) - 10, 'normal 20pt Trebuchet MS, Verdana', '#FFFFFF');
+
+	// Tip
+	this.footerLine.draw();
+	DrawText(this.tipText, (main.CANVAS_WIDTH / 2) - this.tipTextXOffset, main.CANVAS_HEIGHT - 50, 'normal 14pt Century Gothic, Verdana', '#444444');
 };
 
 /************************
@@ -464,7 +469,7 @@ function Player (level) {
 	this.waterSplash			= new Sound('sounds/SFX_Water_Splash.mp3', false, true, false, 0.7);
 	this.waterSwim				= new Sound('sounds/SFX_Water_Swim.mp3', false, true, false, 0.5);
 
-	// this.sprite					= new Sprite('images/player/small/Idle__000.png', this.pos, this.size);
+	// this.sprite					= new Texture(this.pos, this.size, 'rgba(0, 0, 0, 0.3)', 1, 'black');
 	this.idleSprite				= new Animation('images/player/small/SpriteSheet_IDLE.png', this.pos, 50, 500, 0, 0.9);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
 	this.runSprite_Left			= new Animation('images/player/small/SpriteSheet_RUN_LEFT.png', this.pos, 50, 500, 0, 0.05);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
 	this.runSprite_Right		= new Animation('images/player/small/SpriteSheet_RUN_RIGHT.png', this.pos, 50, 500, 0, 0.05);	//path, pos, frameSize, sheetWidth, animationSeq, speed, dir
@@ -923,6 +928,7 @@ function MainMenu (game) {
 	this.playRectTxt		= new Texture(new Vector2(this.playRect.left, this.playRect.top), new Vector2(this.playRect.right-this.playRect.left, this.playRect.bottom-this.playRect.top), 'transparent', 1, '#222222');
 	this.isLeftClickLocked	= false;
 	this.menuMusic			= new Sound('sounds/MUSIC_Ori-and-the-Blind_Forest_Inspiriting.mp3', true, true, false, 0.5);
+	this.startClickSound	= new Sound('sounds/SFX_Menu_Start.mp3', false, true, false, 0.6);
 	this.isFadingOut		= false;
 	this.fadeOutAlpha		= 0;
 	this.fadeOutIntStart	= 0;
@@ -947,9 +953,11 @@ MainMenu.prototype.update = function () {
 	if (mouseMoveX > this.playRect.left && mouseMoveX < this.playRect.right && mouseMoveY > this.playRect.top && mouseMoveY < this.playRect.bottom) {
 		this.playColor = '#F11B2B';
 		if (!this.isLeftClickLocked && Input.Mouse.GetButton(Input.Mouse.LEFT)) {
+			this.startClickSound.Play();
 			this.isLeftClickLocked 	= true;
 			this.isFadingOut		= true;
 			this.fadeOutIntStart	= GameTime.getCurrentGameTime();
+			this.playColor = '#F66F78';
 		}
 	} else {
 		this.playColor = '#FFFFFF';
