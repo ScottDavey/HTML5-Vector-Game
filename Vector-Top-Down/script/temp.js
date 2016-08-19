@@ -347,11 +347,79 @@ Animation.prototype.draw = function () {
 };
 
 /*******************************************
+**************  CAMERA CLASS  **************
+*******************************************/
+function Camera () {
+	this.distance 		= 0.0;
+	this.lookat 		= [0, 0];
+	this.fieldOfView	= Math.PI / 4.0;
+	this.viewport 		= {
+		left: 0,
+		right: 0,
+		top: 0,
+		bottom: 0,
+		width: 0,
+		height: 0,
+		scale: [1.0, 1.0]
+	};
+	this.updateViewport();
+}
+
+Camera.prototype = {
+	begin: function () {
+		main.context.save();
+		this.applyScale();
+		this.applyTranslation();
+	},
+	end: function () {
+		main.context.restore();
+	},
+	applyScale: function () {
+		main.context.scale(this.viewport.scale[0],this.viewport.scale[1]);
+	},
+	applyTranslation: function () {
+		main.context.translate(-this.viewport.left, -this.viewport.top);
+	},
+	updateViewport: function () {
+		this.aspectRatio		= main.CANVAS_WIDTH / main.CANVAS_HEIGHT;
+		this.viewport.width 	= this.distance * Math.tan(this.fieldOfView);
+		this.viewport.height 	= this.viewport.width / this.aspectRatio;
+		this.viewport.left 		= this.lookat[0] - (this.viewport.width / 2.0);
+		this.viewport.top 		= this.lookat[1] - (this.viewport.height / 2.0);
+		this.viewport.right 	= this.viewport.left + this.viewport.width;
+		this.viewport.bottom 	= this.viewport.top + this.viewport.height;
+		this.viewport.scale[0]	= main.CANVAS_WIDTH / this.viewport.width;
+		this.viewport.scale[1]	= main.CANVAS_HEIGHT / this.viewport.height;
+	},
+	zoomTo: function (z) {
+		this.distance = z;
+		this.updateViewport();
+	},
+	moveTo: function (x, y) {
+		this.lookat[0] = x;
+		this.lookat[1] = y;
+		this.updateViewport();
+	},
+	screenToWorld: function (x, y, obj) {
+		obj = obj || {};
+		obj.x = (x / this.viewport.scale[0]) + this.viewport.left;
+		obj.y = (y / this.viewport.scale[1]) + this.viewport.top;
+		return obj;
+	},
+	worldToScreen: function (x, y, obj) {
+		obj = obj || {};
+		obj.x = (x - this.viewport.left) * (this.viewport.scale[0]);
+     	obj.y = (y - this.viewport.top) * (this.viewport.scale[1]);
+		return obj;
+	}
+};
+
+/*******************************************
 **************  PLAYER CLASS  **************
 *******************************************/
 function Player (level) {
 	this.level					= level;
-	this.pos 					= new Vector2(20, 275);
+	this.pos 					= new Vector2(20, 20);
 	this.size 					= new Vector2(27, 50);
 	this.velocity				= new Vector2(0, 0);
 	// Movement
@@ -375,15 +443,15 @@ Player.prototype.SetPos = function (pos) {
 Player.prototype.GetInput = function () {
 
 	// Horizontal Movement
-	if (Input.Keys.GetKey(Input.Keys.A) || Input.Keys.GetKey(Input.Keys.LEFT)) {
+	if (Input.Keys.GetKey(Input.Keys.A)) {
 		this.movementX	= -1.0;
-	} else if (Input.Keys.GetKey(Input.Keys.D) || Input.Keys.GetKey(Input.Keys.RIGHT)) {
+	} else if (Input.Keys.GetKey(Input.Keys.D)) {
 		this.movementX	= 1.0;
 	}
 
-	if (Input.Keys.GetKey(Input.Keys.W) || Input.Keys.GetKey(Input.Keys.UP)) {
+	if (Input.Keys.GetKey(Input.Keys.W)) {
 			this.movementY 	= -1.0;
-	} else if (Input.Keys.GetKey(Input.Keys.S) || Input.Keys.GetKey(Input.Keys.DOWN)) {
+	} else if (Input.Keys.GetKey(Input.Keys.S)) {
 			this.movementY 	= 1.0;
 	}
 
@@ -444,7 +512,7 @@ Player.prototype.ApplyPhysics = function (gameTime) {
 	this.velocity.y = this.Clamp(this.velocity.y, -this.moveSpeed, this.moveSpeed);
 
 	this.pos.x += this.velocity.x;
-	this.pos.y += this.velocity.y;
+	this.pos.y += this.velocity.y;	
 	this.pos	= new Vector2(Math.round(this.pos.x), Math.round(this.pos.y));
 
 	this.HandleCollision();
@@ -474,13 +542,17 @@ Player.prototype.draw = function () {
 ******************/
 function Level (game) {
 	this.game 				= game;
+	this.levelBG 			= new Texture(new Vector2(0, 0), new Vector2(main.WORLD_WIDTH, main.WORLD_HEIGHT), '#221B25', 0, '');
 	this.lines				= [];
 	this.player				= {};
 	this.escapeLocked		= false;
+	this.camera 			= new Camera();
+	this.cameraPos			= new Vector2(0, 0);
 }
 
 Level.prototype.Initialize = function () {
 	this.player		= new Player(this);
+	this.camera.moveTo(this.player.x, this.player.y);
 	this.LoadLines();
 };
 
@@ -492,32 +564,92 @@ Level.prototype.Dispose = function () {
 Level.prototype.LoadLines = function () {
 
 	// WORLD BORDERS
-	this.lines.push(new Line(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, 0), '#999999', 'CEILING', 1));	//TOP
-	this.lines.push(new Line(new Vector2(main.CANVAS_WIDTH, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#999999', 'WALL', -1));	// RIGHT
-	this.lines.push(new Line(new Vector2(0, main.CANVAS_HEIGHT), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#999999', 'FLOOR', -1)); // BOTTOM
-	this.lines.push(new Line(new Vector2(0, 0), new Vector2(0, main.CANVAS_HEIGHT), '#999999', 'WALL', 1));		// LEFT
+	this.lines.push(new Line(new Vector2(0, 0), new Vector2(main.WORLD_WIDTH, 0), '#999999', 'CEILING', 1));	//TOP
+	this.lines.push(new Line(new Vector2(main.WORLD_WIDTH, 0), new Vector2(main.WORLD_WIDTH, main.WORLD_HEIGHT), '#999999', 'WALL', -1));	// RIGHT
+	this.lines.push(new Line(new Vector2(0, main.WORLD_HEIGHT), new Vector2(main.WORLD_WIDTH, main.WORLD_HEIGHT), '#999999', 'FLOOR', -1)); // BOTTOM
+	this.lines.push(new Line(new Vector2(0, 0), new Vector2(0, main.WORLD_HEIGHT), '#999999', 'WALL', 1));		// LEFT
 
-	this.lines.push(new Line(new Vector2(241, 252), new Vector2(444, 138), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(444, 138), new Vector2(605, 288), "#9F0313", "FLOOR", -1, "GRASS"));
-	this.lines.push(new Line(new Vector2(391, 415), new Vector2(604, 286), "#0E72D5", "CEILING", 1, "NONE"));
-	this.lines.push(new Line(new Vector2(243, 254), new Vector2(391, 415), "#0E72D5", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 30), new Vector2(600, 30), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(600, 30), new Vector2(600, 130), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 130), new Vector2(600, 130), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 30), new Vector2(500, 130), "#9F0313", "WALL", -1, "NONE"));
+
+	this.lines.push(new Line(new Vector2(500, 200), new Vector2(600, 200), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(600, 200), new Vector2(600, 300), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 300), new Vector2(600, 300), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 200), new Vector2(500, 300), "#9F0313", "WALL", -1, "NONE"));
+
+	this.lines.push(new Line(new Vector2(500, 500), new Vector2(600, 500), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(600, 500), new Vector2(600, 600), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 600), new Vector2(600, 600), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 500), new Vector2(500, 600), "#9F0313", "WALL", -1, "NONE"));
+
+	this.lines.push(new Line(new Vector2(500, 1000), new Vector2(800, 1000), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(800, 1000), new Vector2(800, 1100), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 1100), new Vector2(800, 1100), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 1000), new Vector2(500, 1100), "#9F0313", "WALL", -1, "NONE"));
+
+	this.lines.push(new Line(new Vector2(500, 2000), new Vector2(800, 2000), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(800, 2000), new Vector2(800, 2100), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 2100), new Vector2(800, 2100), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(500, 2000), new Vector2(500, 2100), "#9F0313", "WALL", -1, "NONE"));
+
+	this.lines.push(new Line(new Vector2(1000, 200), new Vector2(2000, 200), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(2000, 200), new Vector2(2000, 300), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(1000, 300), new Vector2(2000, 300), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(1000, 200), new Vector2(1000, 300), "#9F0313", "WALL", -1, "NONE"));
+
+	this.lines.push(new Line(new Vector2(1000, 750), new Vector2(2000, 750), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(2000, 750), new Vector2(2000, 1050), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(1000, 1050), new Vector2(2000, 1050), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(1000, 750), new Vector2(1000, 1050), "#9F0313", "WALL", -1, "NONE"));
+
+	this.lines.push(new Line(new Vector2(1000, 1750), new Vector2(2000, 1750), "#9F0313", "FLOOR", -1, "NONE"));
+	this.lines.push(new Line(new Vector2(2000, 1750), new Vector2(2000, 2000), "#9F0313", "WALL", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(1000, 2000), new Vector2(2000, 2000), "#9F0313", "CEILING", 1, "NONE"));
+	this.lines.push(new Line(new Vector2(1000, 1750), new Vector2(1000, 2000), "#9F0313", "WALL", -1, "NONE"));
 
 };
 
 Level.prototype.update = function () {
+	var cameraPosX, cameraPosY;
 
 	this.player.update();
+
+	cameraPosX = this.player.pos.x - (main.CANVAS_WIDTH / 2);
+	cameraPosY = this.player.pos.y - (main.CANVAS_HEIGHT / 2);
+
+	if (cameraPosX < 0) {
+		cameraPosX = 0;
+	} else if (cameraPosX > (main.WORLD_WIDTH - main.CANVAS_WIDTH)) {
+		cameraPosX = main.WORLD_WIDTH - main.CANVAS_WIDTH;
+	}
+
+	if (cameraPosY < 0) {
+		cameraPosY = 0;
+	} else if (cameraPosY > (main.WORLD_HEIGHT - main.CANVAS_HEIGHT)) {
+		cameraPosY = main.WORLD_HEIGHT - main.CANVAS_HEIGHT;
+	}
+
+	this.camera.moveTo(cameraPosX, cameraPosY);
+
 };
 
 Level.prototype.draw = function () {
 	var l;
 
+	this.camera.begin();
+
+	this.levelBG.draw();
+
 	// Draw Collision Map
 	for (l = 0; l < this.lines.length; l++) {
 		this.lines[l].draw();
 	}
-
+	
 	this.player.draw();
+
+	this.camera.end();
 
 };
 
@@ -553,7 +685,9 @@ var main = {
 		var wrapper;
 		this.isRunning 				= true;
 		this.CANVAS_WIDTH			= 1080;
-		this.CANVAS_HEIGHT			= 540;
+		this.CANVAS_HEIGHT			= 720;
+		this.WORLD_WIDTH 			= 4320;
+		this.WORLD_HEIGHT 			= 2160;
 		this.canvas					= document.getElementById('viewport');
 		this.canvas.width			= this.CANVAS_WIDTH;
 		this.canvas.height			= this.CANVAS_HEIGHT;
