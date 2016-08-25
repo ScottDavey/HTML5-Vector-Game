@@ -434,6 +434,74 @@ Sound.prototype.IsPlaying = function () {
 };
 
 /*******************************************
+**************  CAMERA CLASS  **************
+*******************************************/
+function Camera () {
+	this.distance 		= 0.0;
+	this.lookat 		= [0, 0];
+	this.fieldOfView	= Math.PI / 4.0;
+	this.viewport 		= {
+		left: 0,
+		right: 0,
+		top: 0,
+		bottom: 0,
+		width: 0,
+		height: 0,
+		scale: [1.0, 1.0]
+	};
+	this.updateViewport();
+}
+
+Camera.prototype = {
+	begin: function () {
+		main.context.save();
+		this.applyScale();
+		this.applyTranslation();
+	},
+	end: function () {
+		main.context.restore();
+	},
+	applyScale: function () {
+		main.context.scale(this.viewport.scale[0],this.viewport.scale[1]);
+	},
+	applyTranslation: function () {
+		main.context.translate(-this.viewport.left, -this.viewport.top);
+	},
+	updateViewport: function () {
+		this.aspectRatio		= main.CANVAS_WIDTH / main.CANVAS_HEIGHT;
+		this.viewport.width 	= this.distance * Math.tan(this.fieldOfView);
+		this.viewport.height 	= this.viewport.width / this.aspectRatio;
+		this.viewport.left 		= this.lookat[0] - (this.viewport.width / 2.0);
+		this.viewport.top 		= this.lookat[1] - (this.viewport.height / 2.0);
+		this.viewport.right 	= this.viewport.left + this.viewport.width;
+		this.viewport.bottom 	= this.viewport.top + this.viewport.height;
+		this.viewport.scale[0]	= main.CANVAS_WIDTH / this.viewport.width;
+		this.viewport.scale[1]	= main.CANVAS_HEIGHT / this.viewport.height;
+	},
+	zoomTo: function (z) {
+		this.distance = z;
+		this.updateViewport();
+	},
+	moveTo: function (x, y) {
+		this.lookat[0] = x;
+		this.lookat[1] = y;
+		this.updateViewport();
+	},
+	screenToWorld: function (x, y, obj) {
+		obj = obj || {};
+		obj.x = (x / this.viewport.scale[0]) + this.viewport.left;
+		obj.y = (y / this.viewport.scale[1]) + this.viewport.top;
+		return obj;
+	},
+	worldToScreen: function (x, y, obj) {
+		obj = obj || {};
+		obj.x = (x - this.viewport.left) * (this.viewport.scale[0]);
+     	obj.y = (y - this.viewport.top) * (this.viewport.scale[1]);
+		return obj;
+	}
+};
+
+/*******************************************
 **************  PLAYER CLASS  **************
 *******************************************/
 function Player (level) {
@@ -715,6 +783,7 @@ function Level (game) {
 	this.levelBG			= {};
 	this.lines				= [];
 	this.waterRect			= {};
+	this.camera 			= {};
 	this.player				= {};
 	this.music				= {};
 	this.escapeLocked		= false;
@@ -724,6 +793,8 @@ Level.prototype.Initialize = function () {
 	this.levelBG	= new Sprite('images/LEVEL_4_Sized.jpg', new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT));
 	this.waterRect	= new Rectangle(0, 374, 1280, 346);	// LEVEL 4
 	this.player		= new Player(this);
+	this.camera 	= new Camera();
+	this.camera.moveTo(this.player.pos.x, this.player.pos.y);
 	this.music		= new Sound('sounds/MUSIC_The-Forgotten_Forest.mp3', true, true, false, 0.2);
 	this.LoadLines();
 	this.music.Play();
@@ -734,6 +805,7 @@ Level.prototype.Dispose = function () {
 	this.levelBG			= {};
 	this.lines				= [];
 	this.waterRect			= {};	// LEVEL 4
+	this.camera 			= {};
 	this.player				= {};
 	this.music				= {};
 };
@@ -742,9 +814,9 @@ Level.prototype.LoadLines = function () {
 
 	// WORLD BORDERS
 	// this.lines.push(new Line(new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, 0), '#999999', 'CEILING', 1));	//TOP
-	this.lines.push(new Line(new Vector2(main.CANVAS_WIDTH, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#999999', 'WALL', -1));	// RIGHT
-	this.lines.push(new Line(new Vector2(0, main.CANVAS_HEIGHT), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT), '#999999', 'FLOOR', -1)); // BOTTOM
-	this.lines.push(new Line(new Vector2(0, 0), new Vector2(0, main.CANVAS_HEIGHT), '#999999', 'WALL', 1));		// LEFT
+	this.lines.push(new Line(new Vector2(main.WORLD_WIDTH, 0), new Vector2(main.WORLD_WIDTH, main.WORLD_HEIGHT), '#999999', 'WALL', -1));	// RIGHT
+	this.lines.push(new Line(new Vector2(0, main.WORLD_HEIGHT), new Vector2(main.WORLD_WIDTH, main.WORLD_HEIGHT), '#999999', 'FLOOR', -1)); // BOTTOM
+	this.lines.push(new Line(new Vector2(0, 0), new Vector2(0, main.WORLD_HEIGHT), '#999999', 'WALL', 1));		// LEFT
 
 	// GROUND/WALL/CEILING
 	this.lines.push(new Line(new Vector2(0, 326), new Vector2(6, 328), "#9F0313", "FLOOR", -1, "GRASS"));
@@ -895,6 +967,7 @@ Level.prototype.DrawText = function (string, x, y, font, color) {
 };
 
 Level.prototype.update = function () {
+	var cameraPosX, cameraPosY;
 
 	this.player.update();
 
@@ -902,10 +975,30 @@ Level.prototype.update = function () {
 		this.isEscapeLocked = true;
 		this.game.ChangeState('TRANSITION', {nextState: 'MAIN MENU'});
 	}
+
+	cameraPosX = this.player.pos.x + (this.player.size.x / 2) - (main.CANVAS_WIDTH / 2);
+	cameraPosY = this.player.pos.y + (this.player.size.y / 2) - (main.CANVAS_HEIGHT / 2);
+
+	if (cameraPosX < 0) {
+		cameraPosX = 0;
+	} else if (cameraPosX > (main.WORLD_WIDTH - main.CANVAS_WIDTH)) {
+		cameraPosX = main.WORLD_WIDTH - main.CANVAS_WIDTH;
+	}
+
+	if (cameraPosY < 0) {
+		cameraPosY = 0;
+	} else if (cameraPosY > (main.WORLD_HEIGHT - main.CANVAS_HEIGHT)) {
+		cameraPosY = main.WORLD_HEIGHT - main.CANVAS_HEIGHT;
+	}
+
+	this.camera.moveTo(cameraPosX, cameraPosY);
+
 };
 
 Level.prototype.draw = function () {
 	var l, g;
+
+	this.camera.begin();
 
 	// Draw Level BG
 	this.levelBG.draw();
@@ -917,6 +1010,7 @@ Level.prototype.draw = function () {
 
 	this.player.draw();
 
+	this.camera.end();
 };
 
 function MainMenu (game) {
@@ -1090,8 +1184,10 @@ var main = {
 	init: function () {
 		var wrapper;
 		this.isRunning 				= true;
-		this.CANVAS_WIDTH			= 1280;
-		this.CANVAS_HEIGHT			= 720;
+		this.CANVAS_WIDTH			= 640;
+		this.CANVAS_HEIGHT			= 360;
+		this.WORLD_WIDTH			= 1280;
+		this.WORLD_HEIGHT			= 720;
 		this.canvas					= document.getElementById('viewport');
 		this.canvas.width			= this.CANVAS_WIDTH;
 		this.canvas.height			= this.CANVAS_HEIGHT;
