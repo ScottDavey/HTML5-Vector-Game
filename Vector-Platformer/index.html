@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" />
 	<style type="text/css">
 		* { padding: 0px; margin: 0px auto; }
-		html, body { background-color: #111111; font:normal 9pt "Century Gothic", Verdana, Arial; color: #FFFFFF; }
+		html, body { background-color: #111111; font:normal 12pt Raleway, "Century Gothic", Verdana, Arial; color: #DCDCDC; }
 
-		#wrapper { margin-top:50px; }
-		#wrapper #heading { width:100%; height:90px; font-size:56pt; color:#05B575; }
+		a { color:#0D7377; text-decoration: none; }
+		a:hover { color:#14FFEC; }
+		li { margin-left:25px; }
+
+		#wrapper { margin-top:30px; }
+		#wrapper #overview { width:1240px; padding:20px; background-color:#000000; }
 	</style>
 
 	<script type="text/javascript" language="javascript" src="script/temp.js"></script>
@@ -15,6 +20,18 @@
 
 	<div id="wrapper">
 		<canvas id="viewport"></canvas>
+		<div id="overview">
+				
+			The purpose of this demo was to test out a more organic form of collision detection using lines instead of the common tile-based approach. As the player moves across the screen, notice that he's following the dips and bumps of the terrain. To see a more visual representation of what the collision lines look like, follow this link to the Vector Map editor: <a href="https://scottdavey.github.io/HTML5-Vector-Game/Vector-Mapper" target="_blank">https://scottdavey.github.io/HTML5-Vector-Game/Vector-Mapper</a>
+			<br /><br />
+			Controls:
+			<ul>
+				<li><strong>Movement</strong>: W, A, S, D <u>OR</u> Keyboard Arrows</li>
+				<li><strong>Jump</strong>: SPACE</li>
+				<li><strong>Return to Menu</strong>: ESCAPE</li>
+			</ul>
+
+		</div>
 	</div>
 
 </body>

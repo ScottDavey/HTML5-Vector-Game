@@ -1078,7 +1078,7 @@ MainMenu.prototype.update = function () {
 MainMenu.prototype.draw = function () {
 	this.menuBG.draw();
 
-	DrawText('HTMl5 VECTOR PLATFORMER', (main.CANVAS_WIDTH / 2 - 375), 150, 'normal 44pt Trebuchet MS, Verdana', '#C51B20');
+	DrawText('HTML5 VECTOR PLATFORMER', (main.CANVAS_WIDTH / 2 - 375), 150, 'normal 44pt Trebuchet MS, Verdana', '#C51B20');
 	DrawText('A Platforming Game', (main.CANVAS_WIDTH / 2 - 150), 190, 'normal 22pt Century Gothic, Verdana', '#FFFFFF');
 	DrawText('PLAY', (main.CANVAS_WIDTH / 2 - 35), (main.CANVAS_HEIGHT - 100), 'bold 18pt Verdana', this.playColor);
 	if (this.isFadingOut) this.fadeOutTexture.draw();
