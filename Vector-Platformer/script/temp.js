@@ -783,7 +783,7 @@ function Level (game) {
 	this.levelBG			= {};
 	this.lines				= [];
 	this.waterRect			= {};
-	this.camera 			= {};
+	// this.camera 			= {};
 	this.player				= {};
 	this.music				= {};
 	this.escapeLocked		= false;
@@ -793,8 +793,8 @@ Level.prototype.Initialize = function () {
 	this.levelBG	= new Sprite('images/LEVEL_4_Sized.jpg', new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT));
 	this.waterRect	= new Rectangle(0, 374, 1280, 346);	// LEVEL 4
 	this.player		= new Player(this);
-	this.camera 	= new Camera();
-	this.camera.moveTo(this.player.pos.x, this.player.pos.y);
+	// this.camera 	= new Camera();
+	// this.camera.moveTo(this.player.pos.x, this.player.pos.y);
 	this.music		= new Sound('sounds/MUSIC_The-Forgotten_Forest.mp3', true, true, false, 0.2);
 	this.LoadLines();
 	this.music.Play();
@@ -805,7 +805,7 @@ Level.prototype.Dispose = function () {
 	this.levelBG			= {};
 	this.lines				= [];
 	this.waterRect			= {};	// LEVEL 4
-	this.camera 			= {};
+	// this.camera 			= {};
 	this.player				= {};
 	this.music				= {};
 };
@@ -976,6 +976,7 @@ Level.prototype.update = function () {
 		this.game.ChangeState('TRANSITION', {nextState: 'MAIN MENU'});
 	}
 
+	/*
 	cameraPosX = this.player.pos.x + (this.player.size.x / 2) - (main.CANVAS_WIDTH / 2);
 	cameraPosY = this.player.pos.y + (this.player.size.y / 2) - (main.CANVAS_HEIGHT / 2);
 
@@ -992,13 +993,14 @@ Level.prototype.update = function () {
 	}
 
 	this.camera.moveTo(cameraPosX, cameraPosY);
+	*/
 
 };
 
 Level.prototype.draw = function () {
 	var l, g;
 
-	this.camera.begin();
+	// this.camera.begin();
 
 	// Draw Level BG
 	this.levelBG.draw();
@@ -1010,7 +1012,7 @@ Level.prototype.draw = function () {
 
 	this.player.draw();
 
-	this.camera.end();
+	// this.camera.end();
 };
 
 function MainMenu (game) {
@@ -1184,8 +1186,10 @@ var main = {
 	init: function () {
 		var wrapper;
 		this.isRunning 				= true;
-		this.CANVAS_WIDTH			= 640;
-		this.CANVAS_HEIGHT			= 360;
+		// this.CANVAS_WIDTH			= 640;
+		// this.CANVAS_HEIGHT			= 360;
+		this.CANVAS_WIDTH			= 1280;
+		this.CANVAS_HEIGHT			= 720;
 		this.WORLD_WIDTH			= 1280;
 		this.WORLD_HEIGHT			= 720;
 		this.canvas					= document.getElementById('viewport');
