@@ -153,6 +153,7 @@ var main = {
 		$('#loadBtn').on('click', main.load.init);
 		$('#exportBtn').on('click', main.export.output);
 		$('#resetBtn').on('click', main.reset);
+		$('#instructionsBtn').on('click', main.instructions.init);
 
 		// Initialize
 		main.LoadGrid();
@@ -420,6 +421,25 @@ var main = {
 		$('#lastPointX').text(0);
 		$('#lastPointY').text(0);
 		main.draw();
+	},
+	instructions: {
+		init: function () {
+			var instructionsDialog, overlay, closeBtn;
+
+			instructionsDialog 	= $('#instructionsDialog');
+			overlay 			= $('#dialogOverlay');
+			closeBtn 			= $('#instructionsClose');
+			
+			closeBtn.on('click', main.instructions.close);
+
+			instructionsDialog.fadeIn(200);
+			overlay.fadeIn(200);
+			
+		},
+		close: function () {
+			$('#instructionsDialog').fadeOut(200);
+			$('#dialogOverlay').fadeOut(200);
+		}
 	},
 	draw: function () {
 		var g, l;

@@ -7,8 +7,10 @@
 </head>
 <body onload="main.init();">
 
-	<!-- DIALOG BOX (EXPORT) -->
+	<!-- OVERLAY -->
 	<div id="dialogOverlay">&nbsp;</div>
+
+	<!-- DIALOG BOX (EXPORT) -->
 	<div id="dialog">
 		<div id="dialogHeader">EXPORT</div>
 		<div id="dialogContent">
@@ -18,6 +20,24 @@
 			<div class="button close" id="dialogCloseBtn">CLOSE</div>
 			<div class="button save" id="dialogSaveBtn">LOAD</div>
 		</div>
+	</div>
+
+	<!-- DIALOG BOX (INSTRUCTIONS) -->
+	<div id="instructionsDialog">
+		<div id="instructionsHeader">INSTRUCTIONS</div>
+		<div id="instructionsContent">
+			<strong>Note:</strong> These are basic instructions. A full write-up can be found here: <a href="https://github.com/ScottDavey/HTML5-Vector-Game" target="_blank">https://github.com/ScottDavey/HTML5-Vector-Game</a>
+			<br /><br />
+			Controls:<br /><br />
+			<ul>
+				<li><strong>Draw Line:</strong> Left Click (once to start a line, another to complete a line)</li>
+				<li><strong>Erase Line:</strong> CTRL + Z</li>
+			</ul>
+		</div>
+		<div id="instructionsFooter">
+			<div class="button close" id="instructionsClose">CLOSE</div>
+		</div>
+		
 	</div>
 
 	<!-- HEADER -->
@@ -72,6 +92,10 @@
 
 			<div class="settings">
 				<div id="resetBtn">RESET</div>
+			</div>
+
+			<div class="settings">
+				<div id="instructionsBtn">INSTRUCTIONS</div>
 			</div>
 
 		</div>
