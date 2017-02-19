@@ -367,10 +367,10 @@ function Transition (game, type, duration, nextState, isFadingIn, isFadingOut, d
 	this.loadingText 	= '';
 	this.footerLine		= new Line(new Vector2(100, main.CANVAS_HEIGHT - 100), new Vector2(main.CANVAS_WIDTH - 100, main.CANVAS_HEIGHT - 100), '#222222', 'NONE', 0, 'NONE');	//startPos, endPos, color, collision, normal, sound
 	this.tipArr			= [
-							["Jump when the time is right.", 120],
-							["Don't break the game or find bugs. If you come across a bug, ignore it and pretend it never happened.", 485],
-							["You cannot walk through a wall. It shouldn't be possible.", 250],
-							["What sorcery is this?", 85]
+							["Randomized tip #1", 80],
+							["Randomized tip #2", 80],
+							["Randomized tip #3", 80],
+							["Randomized tip #4", 80]
 						];
 	this.tipText		= '';
 	this.tipTextXOffset	= 0;
