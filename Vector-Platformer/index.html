@@ -4,14 +4,25 @@
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" />
 	<style type="text/css">
 		* { padding: 0px; margin: 0px auto; }
-		html, body { background-color: #111111; font:normal 12pt Raleway, "Century Gothic", Verdana, Arial; color: #DCDCDC; }
+		html, body { background-color: #111111; font:normal 11pt Raleway, "Century Gothic", Verdana, Arial; color: #DCDCDC; }
 
 		a { color:#0D7377; text-decoration: none; }
 		a:hover { color:#14FFEC; }
 		li { margin-left:25px; }
+		.left { float:left; }
+		.fourty { width:40%; }
+		.sixty { width:60%; }
 
-		#wrapper { margin-top:30px; }
-		#wrapper #overview { width:1240px; padding:20px; background-color:#000000; }
+		#wrapper { margin-top:15px; }
+		#wrapper #overview { width:1280px; background-color:#000000; }
+		#wrapper #overview #leftCol { width:728px; }
+		#wrapper #overview #rightCol { width:470px; border-left:2px solid #111111; }
+		#wrapper #overview .cols { padding:20px; float:left; }
+
+		/** CLEARFIX for floated elements */
+		.cf:before, .cf:after { content:""; display:table; } /* For modern browsers */
+		.cf:after { clear:both; } /* For modern browsers */
+		.cf { *zoom:1; } /* For IE 6/7 (triggers hasLayout) */
 	</style>
 
 	<script type="text/javascript" language="javascript" src="script/temp.js"></script>
@@ -20,17 +31,32 @@
 
 	<div id="wrapper">
 		<canvas id="viewport"></canvas>
-		<div id="overview">
-				
-			The purpose of this demo was to test out a more organic form of collision detection using lines instead of the common tile-based approach. As the player moves across the screen, notice that he's following the dips and bumps of the terrain. To see a more visual representation of what the collision lines look like, follow this link to the Vector Map editor: <a href="https://scottdavey.github.io/HTML5-Vector-Game/Vector-Mapper" target="_blank">https://scottdavey.github.io/HTML5-Vector-Game/Vector-Mapper</a>
-			<br /><br />
-			Controls:
-			<ul>
-				<li><strong>Movement</strong>: W, A, S, D <u>OR</u> Keyboard Arrows</li>
-				<li><strong>Jump</strong>: SPACE</li>
-				<li><strong>Return to Menu</strong>: ESCAPE</li>
-			</ul>
-
+		<div id="overview" class="cf">
+			<div id="leftCol" class="cols">		
+				The purpose of this demo was to test out a more organic form of collision detection using lines instead of the common tile-based approach. As the player moves across the screen, notice that he's following the dips and bumps of the terrain. To see a more visual representation of what the collision lines look like, follow this link to the Vector Map editor: <a href="https://scottdavey.github.io/HTML5-Vector-Game/Vector-Mapper" target="_blank">https://scottdavey.github.io/HTML5-Vector-Game/Vector-Mapper</a>
+				<br /><br />
+				Controls:
+				<ul>
+					<li><strong>Movement</strong>: W, A, S, D <u>OR</u> Keyboard Arrows</li>
+					<li><strong>Jump</strong>: SPACE</li>
+					<li><strong>Return to Menu</strong>: ESCAPE</li>
+				</ul>
+			</div>
+			<div id="rightCol" class="cols">
+				Music:
+				<br /><br />
+				<ul>
+					<li>Menu: "Inspiring" from <a href="http://store.steampowered.com/app/261570" target="_blank">Ori and the Blind Forest</a> soundtrack</li>
+					<li>Game play: "The Forgotten Forest" by <a href="https://itunes.apple.com/us/artist/brandon-fiechter/id587844404" target="_blank">Brandon Feichter</a></li>
+				</ul>
+				<br /><br />
+				Art:
+				<br /><br />
+				<ul>
+					<li>Background: Screenshot from <a href="http://store.steampowered.com/app/261570" target="_blank">Ori and the Blind Forest</a></li>
+					<li>Player: <a href="https://gameartpartners.com/" target="_blank">Game Art Partners</a></li>
+				</ul>
+			</div>
 		</div>
 	</div>
 
