@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lobster" />
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" />
 	<link rel="stylesheet" href="stylesheet.css" type="text/css" />
 	<script type="text/javascript" language="javascript" src="jquery-1.11.3.min.js"></script>
 	<script type="text/javascript" language="javascript" src="script.js"></script>
@@ -22,54 +24,61 @@
 		</div>
 	</div>
 
-	<!-- DIALOG BOX (INSTRUCTIONS) -->
-	<div id="instructionsDialog">
-		<div id="instructionsHeader">INSTRUCTIONS</div>
-		<div id="instructionsContent">
-			<strong>Note:</strong> These are basic instructions. A full write-up can be found here: <a href="https://github.com/ScottDavey/HTML5-Vector-Game" target="_blank">https://github.com/ScottDavey/HTML5-Vector-Game</a>
-			<br /><br />
-			Controls:<br /><br />
-			<ul>
-				<li><strong>Draw Line:</strong> Left Click (once to start a line, another to complete a line)</li>
-				<li><strong>Erase Line:</strong> CTRL + Z</li>
-			</ul>
-			<br /><br />
-			<a href="https://github.com/ScottDavey/HTML5-Vector-Game/tree/master/Vector-Mapper" target="_blank">Check this project out on GitHub</a>
-		</div>
-		<div id="instructionsFooter">
-			<div class="button close" id="instructionsClose">CLOSE</div>
-		</div>
-		
-	</div>
+	<div id="wrapper" class="cf">
 
-	<!-- HEADER -->
-	<div id="header">Vector Mapping</div>
+		<!-- TOOLBOX -->
+		<div id="toolBox">
 
-	<!-- CONTENT -->
-	<div id="wrapper">
-
-		<div id="content">
-			<canvas id="canvas">
-		</div>
-		<div id="controls">
-
-			<div id="info" class="settings">
-				<span class="settingsHeader"><u>INFO</u></span><br /><br />
-				Canvas Size: <span id="canvasSize">0x, 0y</span><br />
-				Mouse: <span id="mouseX">0</span>x, <span id="mouseY">0</span>y<br />
-				Last Point: <span id="lastPointX">0</span>x, <span id="lastPointY">0</span>y
+			<div id="header">
+				<h2>TOOL BOX</h2>
 			</div>
+			
+			<!-- INFORMATION -->
+			<div id="info" class="section">
 
-			<div id="visibility" class="settings">
-				<span class="settingsHeader"><u>VISIBILITY</u></span><br />
-				<label for="showBackgroundCheckbox">Show Background</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="background" checked="true"><br />
-				<label for="showGridCheckbox">Show Grid</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="grid"><br />
-				<label for="showLinesCheckbox">Show Lines</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="lines" checked="true"><br />
-				<label for="showSnapCheckbox">Allow Snapping</label>&nbsp;&nbsp;&nbsp;<input type="checkbox" id="showSnapCheckbox" class="checkboxes" value="snap" checked="true"><br />
+				<h3>Information</h3>
+
+				<div class="cf">
+					<div class="label left">Canvas Size:</div> 
+					<div id="canvasSize">0x, 0y</div>
+				</div>
+
+				<div class="cf">
+					<div class="label left">Mouse:</div> 
+					<div class="left"><span id="mouseX">0</span>x, <span id="mouseY">0</span>y</div>
+				</div>
+
+				<div class="cf">
+					<div class="label left">Last Point:</div> 
+					<div class="left"><span id="lastPointX">0</span>x, <span id="lastPointY">0</span>y</div>
+				</div>
+
 			</div>
+			
+			<!-- PROPERTIES -->
+			<div id="properties" class="section">
 
-			<div id="properties" class="settings">
-				<span class="settingsHeader"><u>PROPERTIES</u></span><br /><br />
+				<h3>Properties</h3>
+
+				<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="background" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showBackgroundCheckbox">Show Background</label><br />
+				<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="grid">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showGridCheckbox">Show Grid</label><br />
+				<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="lines" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showLinesCheckbox">Show Lines</label><br />
+				<input type="checkbox" id="showSnapCheckbox" class="checkboxes" value="snap" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showSnapCheckbox">Allow Snapping</label><br />
+
+			</div>
+			
+			<!-- BACKGROUND IMAGE -->
+			<div id="background" class="section">
+
+				<h3>Background</h3>
+
+				<select id="img"></select>
+
+			</div>
+			
+			<!-- COLLISION -->
+			<div id="collision" class="section">
+				<h3>Collision</u></h3>
 				<ul class="cf">
 					<li class="lineType toggleBtn active">FLOOR</li>
 					<li class="lineType toggleBtn">WALL</li>
@@ -78,28 +87,29 @@
 				<br />
 				<label for="lineNormal">Line Normal:</label>&nbsp;&nbsp;&nbsp;<input type="text" class="textboxes" id="lineNormal" readonly="true" disabled="disabled" value="-1">
 				<br /><br />
-				<ul class="cf">
-					<li class="lineSound toggleBtn active">GRASS</li>
-					<li class="lineSound toggleBtn">WOOD</li>
-				</ul>
+				<label for="lineSound">Line Sound:</label>&nbsp;&nbsp;&nbsp;<input type="text" id="lineSound" value="WOOD">
+			</div>
+			
+			<!-- LOAD BUTTON -->
+			<div class="section">
+				<div class="actionBtn" id="loadBtn">LOAD</div>
 			</div>
 
-			<div class="settings">
-				<div id="loadBtn">LOAD</div>
+			<!-- EXPORT BUTTON -->
+			<div class="section">
+				<div class="actionBtn" id="exportBtn">EXPORT</div>
 			</div>
 
-			<div class="settings">
-				<div id="exportBtn">EXPORT</div>
+			<!-- RESET BUTTON -->
+			<div class="section">
+				<div class="actionBtn" id="resetBtn">RESET</div>
 			</div>
 
-			<div class="settings">
-				<div id="resetBtn">RESET</div>
-			</div>
+		</div>
 
-			<div class="settings">
-				<div id="instructionsBtn">INSTRUCTIONS</div>
-			</div>
-
+		<!-- CANVAS -->
+		<div id="content">
+			<canvas id="canvas"></canvas>
 		</div>
 
 	</div>

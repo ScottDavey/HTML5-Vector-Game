@@ -1,56 +1,58 @@
-* { padding: 0px; margin: 0px auto; }
-html, body { background-color: #111111; font:normal 12pt "Century Gothic", Verdana, Arial; color: #FFFFFF; }
+/* COLLISION MAPPER */
 
+* { padding: 0; margin: 0; }
+html, body { width: 100%; height: 100%; background-color:#111111; font: normal 14pt Raleway, "Century Gothic", Verdana, Arial; color: #FFFFFF; }
+
+.left { float:left; }
+input[type=text] { width: 95%; padding: 5px; }
+select { width: 100%; padding:5px; }
 .checkboxes { padding:10px; border:1px solid #444444; }
 .textboxes { padding:5px; background-color:#FFFFFF; border:1px solid #444444; }
 
-a { color:#0D7377; text-decoration: none; }
-a:hover { color:#14FFEC; }
-li { margin-left:25px; }
+#wrapper { width: 1580px; height: 100%; }
+#wrapper #content { width:1280px; height:720px; float:right; }
+#wrapper #content #canvas { border-right: 1px solid #222222; border-bottom:1px solid #222222; }
 
-#header  { width:1324px; margin-top:15px; font-size:24pt; }
-#wrapper { width:1324px; height:800px; margin-top:10px; background-color:#000000; border:1px solid black; }
-#wrapper #content { width:1024px; height:590px; float:left; }
-#wrapper #content canvas { border-top:1px solid #222222; border-bottom:1px solid #222222; }
-#wrapper #controls { width:280px; height:780px; padding:0px 10px 20px 10px; background-color:#111111; float:right; }
-#wrapper #controls .settings { padding:19px 0px; text-align:right; border-bottom:1px solid #000000; border-top:1px solid #222222; }
-#wrapper #controls .settings:first-child { border-top:0; }
-#wrapper #controls .settings:last-child { border-bottom:0; }
-#wrapper #controls .settings .settingsHeader { font-size:14pt; color:#C68A0D; }
-#wrapper #controls #properties #lineNormal { width:25px; text-align:center; }
-#wrapper #controls #loadBtn { width:150px; padding:6px 0px; background-color:#C68A0D; color:#000000; border:1px solid #000000; text-align:center; cursor:pointer; }
-#wrapper #controls #loadBtn:hover { background-color:#EAA833; }
-#wrapper #controls #exportBtn { width:150px; padding:6px 0px; background-color:#11BE41; color:#000000; border:1px solid #000000; text-align:center; cursor:pointer; }
-#wrapper #controls #exportBtn:hover { background-color:#45ED73; }
-#wrapper #controls #resetBtn { width:150px; padding:6px 0px; background-color:#F11B2B; color:#000000; border:1px solid #000000; text-align:center; cursor:pointer; }
-#wrapper #controls #resetBtn:hover { background-color:#E76960; }
-#wrapper #controls #instructionsBtn { width:150px; padding:6px 0px; background-color:#DCDCDC; color:#000000; border:1px solid #000000; text-align:center; cursor:pointer; }
-#wrapper #controls #instructionsBtn:hover { background-color:#CCCCCC; }
+/*** TOOLBOX ***/
 
-#wrapper #controls .toggleBtn { list-style:none; width:63px; padding:5px 10px; margin-left:5px; background-color:#222222; text-align:center; font-size:10pt; border:1px solid #000000; float:left; cursor:pointer; }
-#wrapper #controls .toggleBtn.active { background-color:#D5971D; color:#000000; }
-#wrapper #controls .toggleBtn:hover { background-color:#F6C33D; color:#000000; }
-#wrapper #controls .toggleBtn.inactive { background-color:#777777; color:#555555; cursor:initial; }
+#toolBox { width: 299px; height: 100%; background-color:#171717; border-right: 1px solid #000000; /*box-shadow:0px 10px 5px #000000;*/ float: left; }
+#toolBox #header { padding:20px; }
+#toolBox #header h1 { font-size:20pt; font-weight:normal; text-align:center; margin-bottom:20px; }
+#toolBox h3 { font:normal 18pt Lobster, "Century Gothic", Verdana, sans-serif; margin-bottom:10px; color:#C68A0D; }
+#toolBox .section { padding:20px; border-bottom:1px solid #000000; }
+#toolBox .section .label { width:50%; color: #efcd86; }
 
-#wrapper audio { width:100px; margin:5px 20px; background-color:#000000; float:left; }
+#toolBox #collision #lineNormal { width:25px; text-align:center; }
+#toolBox #collision #lineSound { width:128px; }
+#toolBox #collision .toggleBtn { list-style:none; width:57px; padding:5px 10px; margin-left:5px; background-color:#222222; text-align:center; font-size:10pt; border:1px solid #000000; float:left; cursor:pointer; }
+#toolBox #collision .toggleBtn.active { background-color:#D5971D; color:#000000; }
+#toolBox #collision .toggleBtn:hover { background-color:#F6C33D; color:#000000; }
+#toolBox #collision .toggleBtn.inactive { background-color:#777777; color:#555555; cursor:initial; }
 
-#dialogOverlay { width:100%; height:100%; background-color:#000000; opacity:0.6; position:absolute; top:0px; left:0px; display:none; }
+#toolBox .section .actionBtn { width: 150px; padding: 6px 0; margin:0 auto; border:1px solid #000000; text-align: center; cursor: pointer; }
+#toolBox .section #loadBtn { background-color:#C68A0D; color:#000000; }
+#toolBox .section #loadBtn:hover { background-color:#EAA833; }
+#toolBox .section #exportBtn { background-color:#11BE41; color:#000000; }
+#toolBox .section #exportBtn:hover { background-color:#45ED73; }
+#toolBox .section #resetBtn { background-color:#F11B2B; color:#000000; }
+#toolBox .section #resetBtn:hover { background-color:#E76960; }
+
+/*** DIALOG ***/
+
+#dialogOverlay { width:100%; height:100%; background-color:#000000; opacity:0.6; position:absolute; top:0; left:0; display:none; }
 
 #dialog { width:850px; height:400px; background-color:#000000; border:2px solid #000000; border-radius:10px; position:absolute; top:50%; left:50%; margin-top:-200px; margin-left:-425px; display:none; }
-#dialog #dialogHeader { width:800px; padding:13px 25px; background-color:#F11B2B; color:#000000; border-radius:8px 8px 0px 0px; font-size:14pt; font-weight:bold; }
-#dialog #dialogContent { width:850px; height:300px; padding:2px 0px; }
+#dialog #dialogHeader { width:800px; padding:13px 25px; background-color:#F11B2B; color:#000000; border-radius:8px 8px 0 0; font-size:14pt; font-weight:bold; }
+#dialog #dialogContent { width:850px; height:300px; padding:2px 0; }
 #dialog #dialogContent #dialogTextarea { width:837px; height:288px; padding:5px; }
-#dialog #dialogFooter { width:850px; height:47px; background-color:#333333; border-radius:0px 0px 8px 8px; }
-#dialog #dialogFooter .button { width:100px; margin:2px 2px 0px 2px; padding:11px 0px; color:#000000; text-align:center; float:right; cursor:pointer; }
+#dialog #dialogFooter { width:850px; height:47px; background-color:#333333; border-radius:0 0 8px 8px; }
+#dialog #dialogFooter .button { width:100px; margin:2px 2px 0 2px; padding:11px 0; color:#000000; text-align:center; float:right; cursor:pointer; }
 #dialog #dialogFooter .button.save { background-color:#F11B2B; }
-#dialog #dialogFooter .button.close { background-color:#CCCCCC; border-radius:0px 0px 6px 0px; }
+#dialog #dialogFooter .button.close { background-color:#CCCCCC; border-radius:0 0 6px 0; }
 
-#instructionsDialog { width:500px; height:400px; background-color:#000000; border:2px solid #000000; border-radius:10px; position:absolute; top:50%; left:50%; margin-top:-200px; margin-left:-250px; display:none; }
-#instructionsDialog #instructionsHeader { width:450px; padding:13px 25px; background-color:#DCDCDC; color:#111111; border-radius:8px 8px 0px 0px; font-size:14pt; font-weight:bold; }
-#instructionsDialog #instructionsContent { width:460px; height:260px; padding:20px; background-color:#FFFFFF; color:#111111; }
-#instructionsDialog #instructionsFooter { width:500px; height:47px; background-color:#333333; border-radius:0px 0px 8px 8px; }
-#instructionsDialog #instructionsFooter .button { width:100px; margin:2px 2px 0px 2px; padding:12px 0px; color:#000000; text-align:center; float:right; cursor:pointer; }
-#instructionsDialog #instructionsFooter .button.close { background-color:#CCCCCC; border-radius:0px 0px 6px 0px; }
+/*** MISC ***/
+
+#content #canvas.move { cursor:move; }
 
 /** CLEARFIX for floated elements */
 .cf:before, .cf:after { content:""; display:table; } /* For modern browsers */

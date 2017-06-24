@@ -11,9 +11,9 @@ function random(min, max) {
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-function SecondsToTime (s) {
+function SecondsToTime (sec) {
 	var h, m, s;
-	s = Number(s);
+	s = Number(sec);
 	h = Math.floor(s / 3600);
 	m = Math.floor(s % 3600 / 60);
 	s = Math.floor(s % 3600 % 60);
@@ -45,7 +45,7 @@ function Line (startPos, endPos, color, collision, normal, sound) {
 	this.collision	= collision;
 	this.normal		= normal;
 	this.sound		= sound;
-};
+}
 
 Line.prototype.draw = function () {
 	main.context.save();
@@ -108,55 +108,144 @@ Sprite.prototype.draw = function () {
 	main.context.drawImage(this.img, this.pos.x, this.pos.y);
 };
 
+/*******************************************
+**************  CAMERA CLASS  **************
+*******************************************/
+function Camera () {
+	this.distance	= 0.0;
+	this.lookat	= [0, 0];
+	this.fieldOfView = Math.PI / 4.0;
+	this.viewport = {
+		left: 0,
+		right: 0,
+		top: 0,
+		bottom: 0,
+		width: 0,
+		height: 0,
+		scale: [1.0, 1.0]
+	};
+	this.updateViewport();
+}
+
+Camera.prototype = {
+	begin: function () {
+		main.context.save();
+		this.applyScale();
+		this.applyTranslation();
+	},
+	end: function () {
+		main.context.restore();
+	},
+	applyScale: function () {
+		main.context.scale(this.viewport.scale[0],this.viewport.scale[1]);
+	},
+	applyTranslation: function () {
+		main.context.translate(-this.viewport.left, -this.viewport.top);
+	},
+	updateViewport: function () {
+		this.aspectRatio = main.CANVAS_WIDTH / main.CANVAS_HEIGHT;
+		this.viewport.width = this.distance * Math.tan(this.fieldOfView);
+		this.viewport.height = this.viewport.width / this.aspectRatio;
+		this.viewport.left = this.lookat[0] - (this.viewport.width / 2.0);
+		this.viewport.top = this.lookat[1] - (this.viewport.height / 2.0);
+		this.viewport.right = this.viewport.left + this.viewport.width;
+		this.viewport.bottom = this.viewport.top + this.viewport.height;
+		this.viewport.scale[0] = main.CANVAS_WIDTH / this.viewport.width;
+		this.viewport.scale[1] = main.CANVAS_HEIGHT / this.viewport.height;
+	},
+	zoomTo: function (z) {
+		this.distance = z;
+		this.updateViewport();
+	},
+	moveTo: function (x, y) {
+		this.lookat[0] = x;
+		this.lookat[1] = y;
+		this.updateViewport();
+		main.draw();
+	},
+	screenToWorld: function (x, y, obj) {
+		obj = obj || {};
+		obj.x = (x / this.viewport.scale[0]) + this.viewport.left;
+		obj.y = (y / this.viewport.scale[1]) + this.viewport.top;
+		return obj;
+	},
+	worldToScreen: function (x, y, obj) {
+		obj = obj || {};
+		obj.x = (x - this.viewport.left) * (this.viewport.scale[0]);
+		obj.y = (y - this.viewport.top) * (this.viewport.scale[1]);
+		return obj;
+	}
+};
+
+// Usable images
+var images = [
+	['LEVEL_1.png', 1024, 590],
+	['LEVEL_3.jpg', 839, 393],
+	['LEVEL_4.jpg', 1920, 1080],
+	['LEVEL_4_Sized.jpg', 1280, 720],
+	['LEVEL_5.jpg', 1200, 675],
+	['LEVEL_6.jpg', 1280, 720],
+	['halloween_by_unidcolor-d5h7jmg4.jpg', 3600, 1050],
+	['Proxima.png', 3840, 1080]
+];
 
 /*****************
 *****  MAIN  *****
 *****************/
 var main = {
 	init: function () {
-		var wrapper, header, content, canvasSize;
-		this.CANVAS_WIDTH			= 1280;
-		this.CANVAS_HEIGHT			= 720;
-		this.canvas					= document.getElementById('canvas');
-		this.canvas.width			= this.CANVAS_WIDTH;
-		this.canvas.height			= this.CANVAS_HEIGHT;
-		this.context				= this.canvas.getContext('2d');
-		this.showBackground			= true;
-		this.showGrid				= false;
-		this.allowSnapping			= true;
-		this.showLines				= true;
-		this.background				= new Sprite('images/LEVEL_4_Sized.jpg', new Vector2(0, 0), new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT));
-		this.grid					= [];
-		this.lines					= [];
-		this.lineType				= 'FLOOR';
-		this.lineNormal				= -1;
+		var imgSelect;
+		this.CANVAS_WIDTH = 1280;
+		this.CANVAS_HEIGHT = 720;
+		this.WORLD_WIDTH = 1280;
+		this.WORLD_HEIGHT = 720;
+		this.canvas = document.getElementById('canvas');
+		this.jCanvas = $('#canvas');
+		this.canvas.width = this.CANVAS_WIDTH;
+		this.canvas.height = this.CANVAS_HEIGHT;
+		this.context = this.canvas.getContext('2d');
+		this.camera = new Camera();
+		this.cameraPos = new Vector2(0, 0);
+		this.showBackground = true;
+		this.showGrid = false;
+		this.allowSnapping = true;
+		this.showLines = true;
+		this.background = undefined;
+		this.grid = [];
+		this.lines = [];
+		this.lineType = 'FLOOR';
+		this.lineNormal = -1;
 
-		// Adjust sizes
-		wrapper						= $('#wrapper');
-		header						= $('#header');
-		content						= $('#content');
-		canvasSize					= $('#canvasSize');
+		this.selected_tool = 'normal';
+		this.isMouseDown = false;
+		this.isSpaceDown = false;
+		this.previousMousePos = new Vector2(0, 0);
 
-		wrapper.css('width', this.CANVAS_WIDTH + 300);
-		header.css('width', this.CANVAS_WIDTH + 300);
-		content.css({'width': this.CANVAS_WIDTH, 'height': this.CANVAS_HEIGHT, 'margin-top': (800 - this.CANVAS_HEIGHT) / 2});
-		canvasSize.text(this.CANVAS_WIDTH + 'x, ' + this.CANVAS_HEIGHT + 'y');
+		this.canvasSizeInfo = $('#canvasSize');
+		this.wrapper = $('#wrapper');
+		this.content = $('#content');
+
+		// this.wrapper.css('width', this.CANVAS_WIDTH);
+		this.content.css({'width': this.CANVAS_WIDTH, 'height': this.CANVAS_HEIGHT});
+		this.canvasSizeInfo.text(this.WORLD_WIDTH + 'x, ' + this.WORLD_HEIGHT + 'y');
 
 		// Event Handlers
-		this.canvas.addEventListener('mousedown', function (e) { main.input.onMouseClick(e); }, false);
+		this.canvas.addEventListener('mousedown', function (e) { main.input.onMouseDown(e); }, false);
+		this.canvas.addEventListener('mouseup', function (e) { main.input.onMouseUp(e); }, false);
 		this.canvas.addEventListener('mousemove', function (e) { main.input.onMouseMove(e); }, false);
 		document.addEventListener('keydown', function (e) { main.input.onKeyDown(e); }, false);
 		document.addEventListener('keyup', function (e) { main.input.onKeyUp(e); }, false);
-		$('#visibility .checkboxes').on('change', main.visibility.onChange);
-		$('#properties .lineType').on('click', main.properties.onLineTypeChange);
-		$('#properties .lineSound').on('click', main.properties.onLineSoundChange);
+		$('#background #img').on('change', main.bg.onImgChange);
+		$('#properties .checkboxes').on('change', main.properties.onChange);
+		$('#collision .lineType').on('click', main.collision.onLineTypeChange);
 		$('#loadBtn').on('click', main.load.init);
 		$('#exportBtn').on('click', main.export.output);
 		$('#resetBtn').on('click', main.reset);
-		$('#instructionsBtn').on('click', main.instructions.init);
 
 		// Initialize
 		main.LoadGrid();
+		main.bg.LoadImageOptions();
+		this.camera.moveTo(this.cameraPos.x, this.cameraPos.y);
 		setTimeout(function () { main.draw(); }, 500);	// Hack to get around the fact that the image isn't loaded right away.
 	},
 	LoadGrid: function () {
@@ -169,75 +258,175 @@ var main = {
 			}
 		}
 	},
+	bg: {
+		LoadImageOptions: function () {
+			var imgSelect, i, filename;
+			imgSelect = $('#background #img');
+			for (i = 0; i < images.length; i++) {
+				filename = images[i][0].split('.');
+				filename = filename[0];
+				imgSelect.append(
+					$('<option />')
+						.data({width: images[i][1], height: images[i][2]})
+						.val(images[i][0])
+						.html(filename)
+				);
+			}
+
+			// trigger a change event
+			imgSelect.trigger('change');
+		},
+		onImgChange: function () {
+			var that, selected, val, width, height, docWidth, docHeight;
+			that = $(this);
+			selected = that.find('option:selected');
+			val = that.val();
+			// Trigger a blur on the select box
+			that.trigger('blur');
+
+			// If this is the first time, create the background sprite.
+			// Else, set the background image of our sprite
+			if (typeof main.background === 'undefined') {
+				main.background = new Sprite('images/' + val, new Vector2(0, 0));
+			} else {
+				main.background.SetImage('images/' + val);
+			}
+
+			// Reset the lines array
+			main.lines = [];
+
+			width = selected.data('width');
+			height = selected.data('height');
+			docWidth = $(document).width() - 301;
+			docHeight = $(document).height() - 5;
+			
+			// Reset Dimensions
+			main.WORLD_WIDTH = width;
+			main.WORLD_HEIGHT = height;
+			main.CANVAS_WIDTH = (main.WORLD_WIDTH > docWidth) ? docWidth : main.WORLD_WIDTH;
+			main.CANVAS_HEIGHT = (main.WORLD_HEIGHT > docHeight) ? docHeight : main.WORLD_HEIGHT;
+			// Apply dimensions
+			main.canvas.width = main.CANVAS_WIDTH;
+			main.canvas.height = main.CANVAS_HEIGHT;
+			main.canvasSizeInfo.text(width + 'x, ' + height + 'y');
+			main.camera.updateViewport();
+			setTimeout(function () { main.draw(); }, 1000);
+		}
+	},
 	input: {
 		currentLine: undefined,
 		lastEndPos: undefined,
 		keys: [],
-		onMouseClick: function (e) {
+		onMouseDown: function (e) {
 			var x, y, lineType, lineNormal, lineSound, lineColor, dX, dY, coordDiff, startPos, endPos;
-			x			= e.offsetX;
-			y			= e.offsetY;
-			lineType	= $('.lineType.active').text();
-			lineSound	= (lineType === 'FLOOR') ? $('.lineSound.active').text() : 'NONE';
-
-			if (typeof main.input.currentLine === 'undefined') {
-				// Begin creating our new line
-				lineNormal				= $('#lineNormal').val();
-				lineColor				= (lineType === 'FLOOR') ? '#9F0313' : (lineType === 'CEILING' ? '#0E72D5' : '#02AA30');
-				coordDiff				= 6;
-				// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
-				if (main.allowSnapping && typeof main.input.lastEndPos !== 'undefined') {
-					dX					= (main.input.lastEndPos.x - x);
-					dY					= (main.input.lastEndPos.y - y);
-					coordDiff			= Math.sqrt(dX*dX + dY*dY);
-				}
-				// If the difference is less than specified, snap it.
-				if (coordDiff <= 5) {
-					startPos			= new Vector2(main.input.lastEndPos.x, main.input.lastEndPos.y);
-				} else {
-					startPos			= new Vector2(x, y);
-				}
-				main.input.currentLine 	= new Line(startPos, new Vector2(x, y), lineColor, lineType, lineNormal, lineSound);
-			} else {
-				// Our walls need to be completely vertical.
-				if (lineType === 'WALL') {
-					endPos = new Vector2(main.input.currentLine.startPos.x, y);
-				} else {
-					endPos = new Vector2(x, y);
-				}
-
-				// We need to make sure the lines are going in the proper direction.
-				// If the start position (x,y) is greater than the end position, switch them
-				if (main.input.currentLine.startPos.x > endPos.x || (lineType === 'WALL' && main.input.currentLine.startPos.y > endPos.y)) {
-					main.input.currentLine.endPos	= main.input.currentLine.startPos;
-					main.input.currentLine.startPos = endPos;
-				} else {
-					main.input.currentLine.endPos 	= endPos;
-				}
-
-				main.lines.push(main.input.currentLine);
-				main.input.currentLine 			= undefined;
-				main.input.lastEndPos			= endPos;
-				main.draw();
-			}
-
-			// UPDATE INFO
-			$('#lastPointX').text(x);
-			$('#lastPointY').text(y);
-		},
-		onMouseMove: function (e) {
-			var x, y;
 			x = e.offsetX;
 			y = e.offsetY;
+			// Correct the mouse positioning if the canvas has been panned
+			x = (x + main.cameraPos.x);
+			y = (y + main.cameraPos.y);
+			lineType = $('.lineType.active').text();
+			lineSound = $('#lineSound').val();
 
-			// Update info with mouse coordinates
-			$('#mouseX').text(x);
-			$('#mouseY').text(y);
+			main.isMouseDown = true;
+
+			// Only proceed if the space bar isn't down
+			if (!main.isSpaceDown) {
+
+				if (typeof main.input.currentLine === 'undefined') {
+					// Begin creating our new line
+					lineNormal = $('#lineNormal').val();
+					lineColor = (lineType === 'FLOOR') ? '#9F0313' : (lineType === 'CEILING' ? '#0E72D5' : '#02AA30');
+					coordDiff = 6;
+					// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
+					if (main.allowSnapping && typeof main.input.lastEndPos !== 'undefined') {
+						dX = (main.input.lastEndPos.x - x);
+						dY = (main.input.lastEndPos.y - y);
+						coordDiff = Math.sqrt(dX*dX + dY*dY);
+					}
+					// If the difference is less than specified, snap it.
+					if (coordDiff <= 5) {
+						startPos = new Vector2(main.input.lastEndPos.x, main.input.lastEndPos.y);
+					} else {
+						startPos = new Vector2(x, y);
+					}
+					main.input.currentLine = new Line(startPos, new Vector2(x, y), lineColor, lineType, lineNormal, lineSound);
+				} else {
+					// Our walls need to be completely vertical.
+					if (lineType === 'WALL') {
+						endPos = new Vector2(main.input.currentLine.startPos.x, y);
+					} else {
+						endPos = new Vector2(x, y);
+					}
+
+					// We need to make sure the lines are going in the proper direction.
+					// If the start position (x,y) is greater than the end position, switch them
+					if (main.input.currentLine.startPos.x > endPos.x || (lineType === 'WALL' && main.input.currentLine.startPos.y > endPos.y)) {
+						main.input.currentLine.endPos = main.input.currentLine.startPos;
+						main.input.currentLine.startPos = endPos;
+					} else {
+						main.input.currentLine.endPos = endPos;
+					}
+
+					main.lines.push(main.input.currentLine);
+					main.input.currentLine = undefined;
+					main.input.lastEndPos = endPos;
+					main.draw();
+				}
+
+				// UPDATE INFO
+				$('#lastPointX').text(x);
+				$('#lastPointY').text(y);
+
+			}
+		},
+		onMouseUp: function () {
+			main.isMouseDown = false;
+		},
+		onMouseMove: function (e) {
+			var x, y, xPanned, yPanned, mouseXDiff, mouseYDiff;
+			x = e.offsetX;
+			y = e.offsetY;
+			xPanned = x + main.cameraPos.x;
+			yPanned = y + main.cameraPos.y;
+
+			// Update info with mouse coordinates (taking camera pannging into account)
+			$('#mouseX').text(xPanned);
+			$('#mouseY').text(yPanned);
+
+			// If space bar is pressed and left mouse button is being clicked, pan the canvas
+			// else if left mouse button is pressed, update lines
+			if (main.isSpaceDown && main.isMouseDown) {
+				
+				// Get the difference between current mouse position and previous
+				mouseXDiff = x - main.previousMousePos.x;
+				mouseYDiff = y - main.previousMousePos.y;
+				// apply the difference to the camera position variable
+				main.cameraPos.x -= mouseXDiff;
+				main.cameraPos.y -= mouseYDiff;
+				
+				// Ensure camera panning doesn't go past world bounds
+				if (main.cameraPos.x <= 0)
+					main.cameraPos.x = 0;
+				else if ((main.cameraPos.x + main.CANVAS_WIDTH) > main.WORLD_WIDTH)
+					main.cameraPos.x = main.WORLD_WIDTH - main.CANVAS_WIDTH;
+
+				if (main.cameraPos.y <= 0)
+					main.cameraPos.y = 0;
+				else if ((main.cameraPos.y + main.CANVAS_HEIGHT) > main.WORLD_HEIGHT)
+					main.cameraPos.y = main.WORLD_HEIGHT - main.CANVAS_HEIGHT;
+
+				// update the camera (the Camera.moveTo function calls Camera.updateViewport where main.draw() is called)
+				main.camera.moveTo(main.cameraPos.x, main.cameraPos.y);
+
+			}
+
+			// Capture the current mouse coordinates
+			main.previousMousePos = new Vector2(x, y);
 
 			// If we've started a line, update the end position so we can see it real-time
 			if (typeof main.input.currentLine !== 'undefined') {
-				if (main.input.currentLine.collision === 'WALL') x = main.input.currentLine.startPos.x;	// Walls can only be perfectly vertical
-				main.input.currentLine.endPos = new Vector2(x, y);
+				if (main.input.currentLine.collision === 'WALL') xPanned = main.input.currentLine.startPos.x;	// Walls can only be perfectly vertical
+				main.input.currentLine.endPos = new Vector2(xPanned, yPanned);
 				main.draw();
 			}
 		},
@@ -257,6 +446,9 @@ var main = {
 				}
 
 				main.draw();
+			} else if (main.input.keys[' ']) {
+				main.isSpaceDown = true;
+				main.jCanvas.addClass('move');
 			}
 
 		},
@@ -264,85 +456,81 @@ var main = {
 			var key;
 			key = e.key;
 			main.input.keys[key] = false;
+
+			if (main.input.keys[' '] || key === ' ') {
+				main.isSpaceDown = false;
+				main.jCanvas.removeClass('move');
+			}
+
 		}
 	},
-	visibility: {
+	properties: {
 		onChange: function () {
 			var that, val, isChecked;
-			that		= $(this);
-			val			= that.val();
-			isChecked	= (that.is(':checked'));
+			that = $(this);
+			val = that.val();
+			isChecked = (that.is(':checked'));
 
 			if (val === 'background') {
 				main.showBackground = isChecked;
 			} else if (val === 'grid') {
-				main.showGrid		= isChecked;
+				main.showGrid = isChecked;
 			} else if (val === 'snap') {
-				main.allowSnapping 	= isChecked;
+				main.allowSnapping = isChecked;
 			} else if (val === 'lines') {
-				main.showLines	 	= isChecked;
+				main.showLines = isChecked;
 			}
 
 			main.draw();
 
 		}
 	},
-	properties: {
+	collision: {
 		onLineTypeChange: function () {
-			var that, val, lineNormal, lineSounds, isLineSoundInactive;
-			that 				= $(this);
-			val	 				= that.text();
-			lineNormal			= $('#lineNormal');
-			lineSounds			= $('#properties .lineSound');
-			isLineSoundInactive	= lineSounds.is('.inactive');
+			var that, val, lineNormal, lineSound;
+			that = $(this);
+			val = that.text();
+			lineNormal = $('#lineNormal');
+			lineSound = $('#lineSound');
 
-			$('#properties .lineType.active').removeClass('active');
+			$('#collision .lineType.active').removeClass('active');
 			that.addClass('active');
 
 			if (val === 'FLOOR') {
 				lineNormal.attr({'readonly': true, 'disabled': true});
 				lineNormal.val(-1);
+				lineSound.attr({'readonly': false, 'disabled': false});
+				lineSound.val('WOOD');
 			} else if (val === 'CEILING') {
 				lineNormal.attr({'readonly': true, 'disabled': true});
 				lineNormal.val(1);
+				lineSound.attr({'readonly': true, 'disabled': true});
+				lineSound.val('');
 			} else {
 				lineNormal.attr({'readonly': false, 'disabled': false});
 				lineNormal.val(1);
-			}
-
-			// Set Line Sound buttons to active or inactive (active if it's on floor line type)
-			if (val === 'FLOOR' && isLineSoundInactive) {
-				lineSounds.removeClass('inactive');
-			} else if (val !== 'FLOOR' && !isLineSoundInactive) {
-				lineSounds.addClass('inactive');
-			}
-
-		},
-		onLineSoundChange: function () {
-			var that, val, isInactive;
-			that		= $(this);
-			val			= that.text();
-			isInactive	= that.hasClass('inactive');
-
-			if (!isInactive) {
-				$('#properties .lineSound.active').removeClass('active');
-				that.addClass('active');
+				lineSound.attr({'readonly': true, 'disabled': true});
+				lineSound.val('');
 			}
 		}
 	},
 	dialog: {
 		show: function (data) {
-			var dialog, headerArea, contentArea, saveBtn, cancelBtn, overlay, title, content, showSaveBtn;
+			var dialog, headerArea, contentArea, saveBtn, cancelBtn, overlay, title, content, showSaveBtn, mainColor;
 
-			dialog			= $('#dialog');
-			headerArea		= $('#dialogHeader');
-			contentArea		= $('#dialogTextarea');
-			saveBtn			= $('#dialogSaveBtn');
-			closeBtn		= $('#dialogCloseBtn');
-			overlay			= $('#dialogOverlay');
-			title			= (typeof data.title === 'undefined') ? 'DIALOG' : data.title;
-			content			= (typeof data.content === 'undefined') ? '' : data.content;
-			showSave		= (typeof data.showSave === 'undefined') ? false : data.showSave;
+			title = (typeof data.title === 'undefined') ? 'DIALOG' : data.title;
+			content = (typeof data.content === 'undefined') ? '' : data.content;
+			showSave = (typeof data.showSave === 'undefined') ? false : data.showSave;
+			mainColor = (title === 'LOAD') ? '#C68A0D' : (title === 'EXPORT' ? '#11BE41' : '#F11B2B');
+
+			dialog = $('#dialog');
+			headerArea = $('#dialogHeader');
+			headerArea.css('background-color', mainColor);
+			contentArea = $('#dialogTextarea');
+			saveBtn = $('#dialogSaveBtn');
+			saveBtn.css('background-color', mainColor);
+			closeBtn = $('#dialogCloseBtn');
+			overlay = $('#dialogOverlay');
 
 			if (showSave) {
 				saveBtn.on('click', main.load.save);
@@ -366,31 +554,25 @@ var main = {
 	},
 	load: {
 		init: function () {
-			main.dialog.show({'title': 'LOAD', 'showSave': true});
+			main.dialog.show({title: 'LOAD', showSave: true});
 		},
 		save: function () {
-			var content, contentSplit, tempo, tempoSplit, j;
+			var content, val, newarr, l;
+			content = $('#dialogTextarea');
+			val = content.val();
 
-			content 		= $('#dialogTextarea').val();
-			contentSplit	= content.split(';');
+			if (val.length === 0) {
+				content.css('background-color', '#FF9999');
+			} else {
 
-			main.reset();
+				newarr = JSON.parse(val);
 
-			$(contentSplit).each(function (i, val) {
-				tempo 		= val.replace('this.lines.push', '');
-				tempo 		= val.replace('new Line', '');
-				tempo 		= val.replace(/new Vector2/g, '');
-				tempo 		= tempo.replace(/\#/g, '');
-				tempo 		= tempo.replace(/\"/g, '');
-				tempo 		= tempo.replace(/\(/g, '');
-				tempo 		= tempo.replace(/\)/g, '');
-				tempo 		= tempo.replace(/\;/g, '');
-				tempo 		= tempo.replace('this.lines.pushnew Line', '');
-				tempo		= tempo.replace(/ /g, '');
-				tempoSplit 	= tempo.split(',');
+				main.lines = [];	// reset
+				for (l = 0; l < newarr.length; l++) {
+					main.lines.push(new Line(new Vector2(newarr[l].sx , newarr[l].sy), new Vector2(newarr[l].ex , newarr[l].ey), newarr[l].h, newarr[l].c, newarr[l].n, newarr[l].s));	//startPos, endPos, color, collision, normal, sound
+				}
 
-				main.lines.push(new Line(new Vector2(tempoSplit[0], tempoSplit[1]), new Vector2(tempoSplit[2], tempoSplit[3]), '#' + tempoSplit[4], tempoSplit[5], tempoSplit[6]));
-			});
+			}
 
 			main.dialog.close();
 			main.draw();
@@ -399,52 +581,47 @@ var main = {
 	},
 	export : {
 		output: function () {
-			var l, line, startPos, endPos, output;
+			var l, line, newarr = [], stringified = '';
 
-			output = '';
+			if (main.lines.length > 0) {
 
-			for (l = 0; l < main.lines.length; l++) {
-				line 		= main.lines[l];
-				startPos	= 'new Vector2(' + line.startPos.x + ', ' + line.startPos.y + ')';
-				endPos		= 'new Vector2(' + line.endPos.x + ', ' + line.endPos.y + ')';
-				output += 'this.lines.push(new Line(' + startPos + ', ' + endPos + ', "' + line.color + '", "' + line.collision + '", ' + line.normal + ', "' + line.sound + '"));';
-				output += '\n';
+				for (l = 0; l < main.lines.length; l++) {
+					line = main.lines[l];
+
+					newarr.push({
+						sx: line.startPos.x,
+						sy: line.startPos.y,
+						ex: line.endPos.x,
+						ey: line.endPos.y,
+						c: line.collision,
+						n: line.normal,
+						s: line.sound,
+						h: line.color
+					});
+				}
+
+				stringified = JSON.stringify(newarr);
+
+				main.dialog.show({title: 'EXPORT', content: stringified, showSave: false});
+
 			}
-
-			main.dialog.show({title: 'EXPORT', 'content': output, 'showSave': false});
 		}
 	},
 	reset: function () {
-		main.lines 				= [];
-		main.input.currentLine 	= undefined;
+		main.lines = [];
+		main.input.currentLine = undefined;
 		$('#dialogTextarea').val('');
 		$('#lastPointX').text(0);
 		$('#lastPointY').text(0);
 		main.draw();
 	},
-	instructions: {
-		init: function () {
-			var instructionsDialog, overlay, closeBtn;
-
-			instructionsDialog 	= $('#instructionsDialog');
-			overlay 			= $('#dialogOverlay');
-			closeBtn 			= $('#instructionsClose');
-			
-			closeBtn.on('click', main.instructions.close);
-
-			instructionsDialog.fadeIn(200);
-			overlay.fadeIn(200);
-			
-		},
-		close: function () {
-			$('#instructionsDialog').fadeOut(200);
-			$('#dialogOverlay').fadeOut(200);
-		}
-	},
 	draw: function () {
 		var g, l;
 		main.context.clearRect(0, 0, main.CANVAS_WIDTH, main.CANVAS_HEIGHT);
-		if (main.showBackground) main.background.draw();
+
+		main.camera.begin();
+		
+		if (typeof main.background !== 'undefined' && main.showBackground) main.background.draw();
 		if (main.showGrid) {
 			for (g = 0; g < main.grid.length; g++) {
 				main.grid[g].draw();
@@ -459,5 +636,7 @@ var main = {
 				main.input.currentLine.draw();
 			}
 		}
+
+		main.camera.end();
 	}
 };
