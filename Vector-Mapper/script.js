@@ -33,12 +33,13 @@ function Rectangle (x, y, width, height) {
 	this.right	= this.x + this.width;
 	this.bottom	= this.y + this.height;
 	this.center	= new Vector2((this.x + (this.width/2)), (this.y + (this.height/2)));
+	this.halfSize = new Vector2((this.width / 2), (this.height / 2));
 }
 
 /***********************
 *****  LINE CLASS  *****
 ***********************/
-function Line (startPos, endPos, color, collision, normal, sound) {
+function Line (startPos, endPos, color, collision, normal, sound, region) {
 	this.startPos	= startPos;
 	this.endPos		= endPos;
 	this.color		= color;
@@ -219,6 +220,7 @@ var main = {
 		this.selected_tool = 'normal';
 		this.isMouseDown = false;
 		this.isSpaceDown = false;
+		this.isCtrlDown = false;
 		this.previousMousePos = new Vector2(0, 0);
 
 		this.canvasSizeInfo = $('#canvasSize');
@@ -236,11 +238,11 @@ var main = {
 		document.addEventListener('keydown', function (e) { main.input.onKeyDown(e); }, false);
 		document.addEventListener('keyup', function (e) { main.input.onKeyUp(e); }, false);
 		$('#background #img').on('change', main.bg.onImgChange);
-		$('#properties .checkboxes').on('change', main.properties.onChange);
-		$('#collision .lineType').on('click', main.collision.onLineTypeChange);
-		$('#loadBtn').on('click', main.load.init);
-		$('#exportBtn').on('click', main.export.output);
-		$('#resetBtn').on('click', main.reset);
+		$('#properties .checkboxes').on('change', main.toolBox.properties.onChange);
+		$('#collision .lineType').on('click', main.toolBox.collision.onLineTypeChange);
+		$('#loadBtn').on('click', main.toolBox.load.init);
+		$('#exportBtn').on('click', main.toolBox.export.output);
+		$('#resetBtn').on('click', main.toolBox.reset);
 
 		// Initialize
 		main.LoadGrid();
@@ -318,64 +320,25 @@ var main = {
 		lastEndPos: undefined,
 		keys: [],
 		onMouseDown: function (e) {
-			var x, y, lineType, lineNormal, lineSound, lineColor, dX, dY, coordDiff, startPos, endPos;
+			var x, y;
 			x = e.offsetX;
 			y = e.offsetY;
 			// Correct the mouse positioning if the canvas has been panned
 			x = (x + main.cameraPos.x);
 			y = (y + main.cameraPos.y);
-			lineType = $('.lineType.active').text();
-			lineSound = $('#lineSound').val();
 
 			main.isMouseDown = true;
 
 			// Only proceed if the space bar isn't down
 			if (!main.isSpaceDown) {
 
-				if (typeof main.input.currentLine === 'undefined') {
-					// Begin creating our new line
-					lineNormal = $('#lineNormal').val();
-					lineColor = (lineType === 'FLOOR') ? '#9F0313' : (lineType === 'CEILING' ? '#0E72D5' : '#02AA30');
-					coordDiff = 6;
-					// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
-					if (main.allowSnapping && typeof main.input.lastEndPos !== 'undefined') {
-						dX = (main.input.lastEndPos.x - x);
-						dY = (main.input.lastEndPos.y - y);
-						coordDiff = Math.sqrt(dX*dX + dY*dY);
-					}
-					// If the difference is less than specified, snap it.
-					if (coordDiff <= 5) {
-						startPos = new Vector2(main.input.lastEndPos.x, main.input.lastEndPos.y);
-					} else {
-						startPos = new Vector2(x, y);
-					}
-					main.input.currentLine = new Line(startPos, new Vector2(x, y), lineColor, lineType, lineNormal, lineSound);
+				// If Control key is down, we're erasing lines
+				// Else, we're adding lines
+				if (main.isCtrlDown) {
+					main.line.erase.line(x, y);
 				} else {
-					// Our walls need to be completely vertical.
-					if (lineType === 'WALL') {
-						endPos = new Vector2(main.input.currentLine.startPos.x, y);
-					} else {
-						endPos = new Vector2(x, y);
-					}
-
-					// We need to make sure the lines are going in the proper direction.
-					// If the start position (x,y) is greater than the end position, switch them
-					if (main.input.currentLine.startPos.x > endPos.x || (lineType === 'WALL' && main.input.currentLine.startPos.y > endPos.y)) {
-						main.input.currentLine.endPos = main.input.currentLine.startPos;
-						main.input.currentLine.startPos = endPos;
-					} else {
-						main.input.currentLine.endPos = endPos;
-					}
-
-					main.lines.push(main.input.currentLine);
-					main.input.currentLine = undefined;
-					main.input.lastEndPos = endPos;
-					main.draw();
+					main.line.add(x, y);
 				}
-
-				// UPDATE INFO
-				$('#lastPointX').text(x);
-				$('#lastPointY').text(y);
 
 			}
 		},
@@ -383,7 +346,7 @@ var main = {
 			main.isMouseDown = false;
 		},
 		onMouseMove: function (e) {
-			var x, y, xPanned, yPanned, mouseXDiff, mouseYDiff;
+			var x, y, xPanned, yPanned;
 			x = e.offsetX;
 			y = e.offsetY;
 			xPanned = x + main.cameraPos.x;
@@ -396,38 +359,15 @@ var main = {
 			// If space bar is pressed and left mouse button is being clicked, pan the canvas
 			// else if left mouse button is pressed, update lines
 			if (main.isSpaceDown && main.isMouseDown) {
-				
-				// Get the difference between current mouse position and previous
-				mouseXDiff = x - main.previousMousePos.x;
-				mouseYDiff = y - main.previousMousePos.y;
-				// apply the difference to the camera position variable
-				main.cameraPos.x -= mouseXDiff;
-				main.cameraPos.y -= mouseYDiff;
-				
-				// Ensure camera panning doesn't go past world bounds
-				if (main.cameraPos.x <= 0)
-					main.cameraPos.x = 0;
-				else if ((main.cameraPos.x + main.CANVAS_WIDTH) > main.WORLD_WIDTH)
-					main.cameraPos.x = main.WORLD_WIDTH - main.CANVAS_WIDTH;
-
-				if (main.cameraPos.y <= 0)
-					main.cameraPos.y = 0;
-				else if ((main.cameraPos.y + main.CANVAS_HEIGHT) > main.WORLD_HEIGHT)
-					main.cameraPos.y = main.WORLD_HEIGHT - main.CANVAS_HEIGHT;
-
-				// update the camera (the Camera.moveTo function calls Camera.updateViewport where main.draw() is called)
-				main.camera.moveTo(main.cameraPos.x, main.cameraPos.y);
-
+				main.fnCamera.pan(x, y, xPanned, yPanned);
 			}
 
-			// Capture the current mouse coordinates
+			// Set the current coordinates to our previous variable
 			main.previousMousePos = new Vector2(x, y);
 
 			// If we've started a line, update the end position so we can see it real-time
 			if (typeof main.input.currentLine !== 'undefined') {
-				if (main.input.currentLine.collision === 'WALL') xPanned = main.input.currentLine.startPos.x;	// Walls can only be perfectly vertical
-				main.input.currentLine.endPos = new Vector2(xPanned, yPanned);
-				main.draw();
+				main.line.showEnd(xPanned, yPanned);
 			}
 		},
 		onKeyDown: function (e) {
@@ -438,14 +378,11 @@ var main = {
 
 			// Undo the last line
 			if (main.input.keys['Control'] && main.input.keys['z']) {
-				// If we've just completed a line, delete the last node of the main lines array. Else, cancel the current line in progress.
-				if (typeof main.input.currentLine === 'undefined' && main.lines.length > 0) {
-					main.lines.pop();
-				} else {
-					main.input.currentLine = undefined;
-				}
-
+				main.line.erase.lastLine();
 				main.draw();
+			} else if (main.input.keys['Control']) {
+				main.isCtrlDown = true;
+				main.jCanvas.addClass('erase');
 			} else if (main.input.keys[' ']) {
 				main.isSpaceDown = true;
 				main.jCanvas.addClass('move');
@@ -457,163 +394,302 @@ var main = {
 			key = e.key;
 			main.input.keys[key] = false;
 
-			if (main.input.keys[' '] || key === ' ') {
+			if (key === 'Control') {
+				main.isCtrlDown = false;
+				main.jCanvas.removeClass('erase');
+			} else if (key === ' ') {
 				main.isSpaceDown = false;
 				main.jCanvas.removeClass('move');
 			}
 
 		}
 	},
-	properties: {
-		onChange: function () {
-			var that, val, isChecked;
-			that = $(this);
-			val = that.val();
-			isChecked = (that.is(':checked'));
+	fnCamera: {
+		pan: function (x, y, xPanned, yPanned) {
+			var mouseXDiff, mouseYDiff;
+			// Get the difference between current mouse position and previous
+			mouseXDiff = x - main.previousMousePos.x;
+			mouseYDiff = y - main.previousMousePos.y;
+			// apply the difference to the camera position variable
+			main.cameraPos.x -= mouseXDiff;
+			main.cameraPos.y -= mouseYDiff;
+			
+			// Ensure camera panning doesn't go past world bounds
+			if (main.cameraPos.x <= 0)
+				main.cameraPos.x = 0;
+			else if ((main.cameraPos.x + main.CANVAS_WIDTH) > main.WORLD_WIDTH)
+				main.cameraPos.x = main.WORLD_WIDTH - main.CANVAS_WIDTH;
 
-			if (val === 'background') {
-				main.showBackground = isChecked;
-			} else if (val === 'grid') {
-				main.showGrid = isChecked;
-			} else if (val === 'snap') {
-				main.allowSnapping = isChecked;
-			} else if (val === 'lines') {
-				main.showLines = isChecked;
-			}
+			if (main.cameraPos.y <= 0)
+				main.cameraPos.y = 0;
+			else if ((main.cameraPos.y + main.CANVAS_HEIGHT) > main.WORLD_HEIGHT)
+				main.cameraPos.y = main.WORLD_HEIGHT - main.CANVAS_HEIGHT;
 
-			main.draw();
-
+			// update the camera (the Camera.moveTo function calls Camera.updateViewport where main.draw() is called)
+			main.camera.moveTo(main.cameraPos.x, main.cameraPos.y);
 		}
 	},
-	collision: {
-		onLineTypeChange: function () {
-			var that, val, lineNormal, lineSound;
-			that = $(this);
-			val = that.text();
-			lineNormal = $('#lineNormal');
-			lineSound = $('#lineSound');
+	line: {
+		add: function (x, y) {
+			var lineType, lineNormal, lineSound, lineColor, dX, dY, coordDiff, startPos, endPos;
 
-			$('#collision .lineType.active').removeClass('active');
-			that.addClass('active');
+			lineType = $('.lineType.active').text();
+			lineSound = $('#lineSound').val();
 
-			if (val === 'FLOOR') {
-				lineNormal.attr({'readonly': true, 'disabled': true});
-				lineNormal.val(-1);
-				lineSound.attr({'readonly': false, 'disabled': false});
-				lineSound.val('WOOD');
-			} else if (val === 'CEILING') {
-				lineNormal.attr({'readonly': true, 'disabled': true});
-				lineNormal.val(1);
-				lineSound.attr({'readonly': true, 'disabled': true});
-				lineSound.val('');
+			if (typeof main.input.currentLine === 'undefined') {
+				// Begin creating our new line
+				lineNormal = $('#lineNormal').val();
+				lineColor = (lineType === 'FLOOR') ? '#9F0313' : (lineType === 'CEILING' ? '#0E72D5' : '#02AA30');
+				coordDiff = 6;
+				// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
+				if (main.allowSnapping && typeof main.input.lastEndPos !== 'undefined') {
+					dX = (main.input.lastEndPos.x - x);
+					dY = (main.input.lastEndPos.y - y);
+					coordDiff = Math.sqrt(dX*dX + dY*dY);
+				}
+				// If the difference is less than specified, snap it.
+				if (coordDiff <= 5) {
+					startPos = new Vector2(main.input.lastEndPos.x, main.input.lastEndPos.y);
+				} else {
+					startPos = new Vector2(x, y);
+				}
+				main.input.currentLine = new Line(startPos, new Vector2(x, y), lineColor, lineType, lineNormal, lineSound);
 			} else {
-				lineNormal.attr({'readonly': false, 'disabled': false});
-				lineNormal.val(1);
-				lineSound.attr({'readonly': true, 'disabled': true});
-				lineSound.val('');
-			}
-		}
-	},
-	dialog: {
-		show: function (data) {
-			var dialog, headerArea, contentArea, saveBtn, cancelBtn, overlay, title, content, showSaveBtn, mainColor;
-
-			title = (typeof data.title === 'undefined') ? 'DIALOG' : data.title;
-			content = (typeof data.content === 'undefined') ? '' : data.content;
-			showSave = (typeof data.showSave === 'undefined') ? false : data.showSave;
-			mainColor = (title === 'LOAD') ? '#C68A0D' : (title === 'EXPORT' ? '#11BE41' : '#F11B2B');
-
-			dialog = $('#dialog');
-			headerArea = $('#dialogHeader');
-			headerArea.css('background-color', mainColor);
-			contentArea = $('#dialogTextarea');
-			saveBtn = $('#dialogSaveBtn');
-			saveBtn.css('background-color', mainColor);
-			closeBtn = $('#dialogCloseBtn');
-			overlay = $('#dialogOverlay');
-
-			if (showSave) {
-				saveBtn.on('click', main.load.save);
-				saveBtn.show();
-			} else {
-				saveBtn.hide();
-			}
-
-			headerArea.text(title);
-			contentArea.val(content);
-
-			closeBtn.on('click', main.dialog.close);
-			dialog.fadeIn(200);
-			overlay.fadeIn(200);
-
-		},
-		close: function () {
-			$('#dialog').fadeOut(200);
-			$('#dialogOverlay').fadeOut(200);
-		}
-	},
-	load: {
-		init: function () {
-			main.dialog.show({title: 'LOAD', showSave: true});
-		},
-		save: function () {
-			var content, val, newarr, l;
-			content = $('#dialogTextarea');
-			val = content.val();
-
-			if (val.length === 0) {
-				content.css('background-color', '#FF9999');
-			} else {
-
-				newarr = JSON.parse(val);
-
-				main.lines = [];	// reset
-				for (l = 0; l < newarr.length; l++) {
-					main.lines.push(new Line(new Vector2(newarr[l].sx , newarr[l].sy), new Vector2(newarr[l].ex , newarr[l].ey), newarr[l].h, newarr[l].c, newarr[l].n, newarr[l].s));	//startPos, endPos, color, collision, normal, sound
+				// Our walls need to be completely vertical.
+				if (lineType === 'WALL') {
+					endPos = new Vector2(main.input.currentLine.startPos.x, y);
+				} else {
+					endPos = new Vector2(x, y);
 				}
 
+				// We need to make sure the lines are going in the proper direction.
+				// If the start position (x,y) is greater than the end position, switch them
+				if (main.input.currentLine.startPos.x > endPos.x || (lineType === 'WALL' && main.input.currentLine.startPos.y > endPos.y)) {
+					main.input.currentLine.endPos = main.input.currentLine.startPos;
+					main.input.currentLine.startPos = endPos;
+				} else {
+					main.input.currentLine.endPos = endPos;
+				}
+
+				main.lines.push(main.input.currentLine);
+				main.input.currentLine = undefined;
+				main.input.lastEndPos = endPos;
+				main.draw();
 			}
 
-			main.dialog.close();
+			// UPDATE INFO
+			$('#lastPointX').text(x);
+			$('#lastPointY').text(y);
+		},
+		showEnd: function (xPanned, yPanned) {
+			if (main.input.currentLine.collision === 'WALL') xPanned = main.input.currentLine.startPos.x;	// Walls can only be perfectly vertical
+			main.input.currentLine.endPos = new Vector2(xPanned, yPanned);
 			main.draw();
+		},
+		erase: {
+			line: function (x, y) {
+				var l, line, slope, b, yc, bounds, eraseLine;
 
-		}
-	},
-	export : {
-		output: function () {
-			var l, line, newarr = [], stringified = '';
+				bounds = new Rectangle(x-5, y-5, 10, 10);	// give a 10 pixel buffer and offset it so the click point is the center
+				eraseLine = false;
 
-			if (main.lines.length > 0) {
-
+				// Loop through lines and figure out whether or not we're intersecting
 				for (l = 0; l < main.lines.length; l++) {
+
 					line = main.lines[l];
 
-					newarr.push({
-						sx: line.startPos.x,
-						sy: line.startPos.y,
-						ex: line.endPos.x,
-						ey: line.endPos.y,
-						c: line.collision,
-						n: line.normal,
-						s: line.sound,
-						h: line.color
-					});
+					if ((line.collision == 'FLOOR' || line.collision == 'CEILING') && bounds.center.x >= line.startPos.x && bounds.center.x <= line.endPos.x) {
+
+						slope = (line.endPos.y - line.startPos.y) / (line.endPos.x - line.startPos.x);
+						b = line.startPos.y - (slope * line.startPos.x);
+						yc = (slope * bounds.center.x) + b;
+
+						if (Math.abs(yc - bounds.center.y) <= bounds.halfSize.y) {
+							eraseLine = true;
+						}
+
+					} else if (line.collision == 'WALL' && bounds.center.y > line.startPos.y && bounds.center.y < line.endPos.y) {
+
+						xDiff = Math.abs(bounds.center.x - line.startPos.x);
+
+						if (xDiff <= bounds.halfSize.x) {
+							eraseLine = true;
+						}
+
+					}
+
+					// If we clicked on a line, remove it from the array and re-draw
+					if (eraseLine) {
+						main.lines.splice(l, 1);
+						main.draw();
+						break; // no sense in continuing loop
+					}
+
 				}
 
-				stringified = JSON.stringify(newarr);
-
-				main.dialog.show({title: 'EXPORT', content: stringified, showSave: false});
-
+			},
+			lastLine: function () {
+				// If we've just completed a line, delete the last node of the main lines array. Else, cancel the current line in progress.
+				if (typeof main.input.currentLine === 'undefined' && main.lines.length > 0) {
+					main.lines.pop();
+				} else {
+					main.input.currentLine = undefined;
+				}
 			}
 		}
 	},
-	reset: function () {
-		main.lines = [];
-		main.input.currentLine = undefined;
-		$('#dialogTextarea').val('');
-		$('#lastPointX').text(0);
-		$('#lastPointY').text(0);
-		main.draw();
+	toolBox: {
+		properties: {
+			onChange: function () {
+				var that, val, isChecked;
+				that = $(this);
+				val = that.val();
+				isChecked = (that.is(':checked'));
+
+				if (val === 'background') {
+					main.showBackground = isChecked;
+				} else if (val === 'grid') {
+					main.showGrid = isChecked;
+				} else if (val === 'snap') {
+					main.allowSnapping = isChecked;
+				} else if (val === 'lines') {
+					main.showLines = isChecked;
+				}
+
+				main.draw();
+
+			}
+		},
+		collision: {
+			onLineTypeChange: function () {
+				var that, val, lineNormal, lineSound;
+				that = $(this);
+				val = that.text();
+				lineNormal = $('#lineNormal');
+				lineSound = $('#lineSound');
+
+				$('#collision .lineType.active').removeClass('active');
+				that.addClass('active');
+
+				if (val === 'FLOOR') {
+					lineNormal.attr({'readonly': true, 'disabled': true});
+					lineNormal.val(-1);
+					lineSound.attr({'readonly': false, 'disabled': false});
+					lineSound.val('WOOD');
+				} else if (val === 'CEILING') {
+					lineNormal.attr({'readonly': true, 'disabled': true});
+					lineNormal.val(1);
+					lineSound.attr({'readonly': true, 'disabled': true});
+					lineSound.val('');
+				} else {
+					lineNormal.attr({'readonly': false, 'disabled': false});
+					lineNormal.val(1);
+					lineSound.attr({'readonly': true, 'disabled': true});
+					lineSound.val('');
+				}
+			}
+		},
+		dialog: {
+			show: function (data) {
+				var dialog, headerArea, contentArea, saveBtn, cancelBtn, overlay, title, content, showSaveBtn, mainColor;
+
+				title = (typeof data.title === 'undefined') ? 'DIALOG' : data.title;
+				content = (typeof data.content === 'undefined') ? '' : data.content;
+				showSave = (typeof data.showSave === 'undefined') ? false : data.showSave;
+				mainColor = (title === 'LOAD') ? '#C68A0D' : (title === 'EXPORT' ? '#11BE41' : '#F11B2B');
+
+				dialog = $('#dialog');
+				headerArea = $('#dialogHeader');
+				headerArea.css('background-color', mainColor);
+				contentArea = $('#dialogTextarea');
+				saveBtn = $('#dialogSaveBtn');
+				saveBtn.css('background-color', mainColor);
+				closeBtn = $('#dialogCloseBtn');
+				overlay = $('#dialogOverlay');
+
+				if (showSave) {
+					saveBtn.on('click', main.toolBox.load.save);
+					saveBtn.show();
+				} else {
+					saveBtn.hide();
+				}
+
+				headerArea.text(title);
+				contentArea.val(content);
+
+				closeBtn.on('click', main.toolBox.dialog.close);
+				dialog.fadeIn(200);
+				overlay.fadeIn(200);
+
+			},
+			close: function () {
+				$('#dialog').fadeOut(200);
+				$('#dialogOverlay').fadeOut(200);
+			}
+		},
+		load: {
+			init: function () {
+				main.toolBox.dialog.show({title: 'LOAD', showSave: true});
+			},
+			save: function () {
+				var content, val, newarr, l;
+				content = $('#dialogTextarea');
+				val = content.val();
+
+				if (val.length === 0) {
+					content.css('background-color', '#FF9999');
+				} else {
+
+					newarr = JSON.parse(val);
+
+					main.lines = [];	// reset
+					for (l = 0; l < newarr.length; l++) {
+						main.lines.push(new Line(new Vector2(newarr[l].sx , newarr[l].sy), new Vector2(newarr[l].ex , newarr[l].ey), newarr[l].h, newarr[l].c, newarr[l].n, newarr[l].s));	//startPos, endPos, color, collision, normal, sound
+					}
+
+				}
+
+				main.toolBox.dialog.close();
+				main.draw();
+
+			}
+		},
+		export : {
+			output: function () {
+				var l, line, newarr = [], stringified = '';
+
+				if (main.lines.length > 0) {
+
+					for (l = 0; l < main.lines.length; l++) {
+						line = main.lines[l];
+
+						newarr.push({
+							sx: line.startPos.x,
+							sy: line.startPos.y,
+							ex: line.endPos.x,
+							ey: line.endPos.y,
+							c: line.collision,
+							n: line.normal,
+							s: line.sound,
+							h: line.color
+						});
+					}
+
+					stringified = JSON.stringify(newarr);
+
+					main.toolBox.dialog.show({title: 'EXPORT', content: stringified, showSave: false});
+
+				}
+			}
+		},
+		reset: function () {
+			main.lines = [];
+			main.input.currentLine = undefined;
+			$('#dialogTextarea').val('');
+			$('#lastPointX').text(0);
+			$('#lastPointY').text(0);
+			main.draw();
+		}
 	},
 	draw: function () {
 		var g, l;

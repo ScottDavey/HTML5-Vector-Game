@@ -53,6 +53,7 @@ select { width: 100%; padding:5px; }
 /*** MISC ***/
 
 #content #canvas.move { cursor:move; }
+#content #canvas.erase { cursor:no-drop; }
 
 /** CLEARFIX for floated elements */
 .cf:before, .cf:after { content:""; display:table; } /* For modern browsers */
