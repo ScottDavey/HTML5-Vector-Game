@@ -40,12 +40,13 @@ function Rectangle (x, y, width, height) {
 *****  LINE CLASS  *****
 ***********************/
 function Line (startPos, endPos, color, collision, normal, sound, region) {
-	this.startPos	= startPos;
-	this.endPos		= endPos;
-	this.color		= color;
-	this.collision	= collision;
-	this.normal		= normal;
-	this.sound		= sound;
+	this.startPos = startPos;
+	this.endPos = endPos;
+	this.color = color;
+	this.collision = collision;
+	this.normal = normal;
+	this.sound = sound;
+	this.region = region;
 }
 
 Line.prototype.draw = function () {
@@ -195,7 +196,6 @@ var images = [
 *****************/
 var main = {
 	init: function () {
-		var imgSelect;
 		this.CANVAS_WIDTH = 1280;
 		this.CANVAS_HEIGHT = 720;
 		this.WORLD_WIDTH = 1280;
@@ -213,6 +213,7 @@ var main = {
 		this.showLines = true;
 		this.background = undefined;
 		this.grid = [];
+		this.gridSize = 500;
 		this.lines = [];
 		this.lineType = 'FLOOR';
 		this.lineNormal = -1;
@@ -248,15 +249,16 @@ var main = {
 		main.LoadGrid();
 		main.bg.LoadImageOptions();
 		this.camera.moveTo(this.cameraPos.x, this.cameraPos.y);
-		setTimeout(function () { main.draw(); }, 500);	// Hack to get around the fact that the image isn't loaded right away.
+		setTimeout(function () { main.draw(); }, 1000);	// Hack to get around the fact that the image isn't loaded right away.
 	},
 	LoadGrid: function () {
-		var x, y, square;
-		square = 20;
+		var x, y;
 
-		for (y = 0; y < Math.ceil(main.CANVAS_HEIGHT / square); y++) {
-			for (x = 0; x < Math.ceil(main.CANVAS_WIDTH / square); x++) {
-				this.grid.push(new Texture(new Vector2(x * square, y * square), new Vector2(square, square), 'transparent', 1, '#222222'));
+		this.grid = [];
+
+		for (y = 0; y < Math.ceil(main.CANVAS_HEIGHT / main.gridSize); y++) {
+			for (x = 0; x < Math.ceil(main.CANVAS_WIDTH / main.gridSize); x++) {
+				this.grid.push(new Texture(new Vector2(x * main.gridSize, y * main.gridSize), new Vector2(main.gridSize, main.gridSize), 'transparent', 1, '#222222'));
 			}
 		}
 	},
@@ -294,8 +296,9 @@ var main = {
 				main.background.SetImage('images/' + val);
 			}
 
-			// Reset the lines array
+			// Reset some variables
 			main.lines = [];
+			this.grid = [];
 
 			width = selected.data('width');
 			height = selected.data('height');
@@ -313,6 +316,7 @@ var main = {
 			main.canvasSizeInfo.text(width + 'x, ' + height + 'y');
 			main.camera.updateViewport();
 			setTimeout(function () { main.draw(); }, 1000);
+			main.LoadGrid();
 		}
 	},
 	input: {
@@ -431,7 +435,7 @@ var main = {
 	},
 	line: {
 		add: function (x, y) {
-			var lineType, lineNormal, lineSound, lineColor, dX, dY, coordDiff, startPos, endPos;
+			var lineType, lineNormal, lineSound, lineColor, dX, dY, coordDiff, regionX, regionY, region, startPos, endPos;
 
 			lineType = $('.lineType.active').text();
 			lineSound = $('#lineSound').val();
@@ -453,6 +457,7 @@ var main = {
 				} else {
 					startPos = new Vector2(x, y);
 				}
+
 				main.input.currentLine = new Line(startPos, new Vector2(x, y), lineColor, lineType, lineNormal, lineSound);
 			} else {
 				// Our walls need to be completely vertical.
@@ -471,6 +476,13 @@ var main = {
 					main.input.currentLine.endPos = endPos;
 				}
 
+				// Based on the line's start position, calculate what region it's in
+				regionX = Math.floor(main.input.currentLine.startPos.x / main.gridSize); 
+				regionY = Math.floor(main.input.currentLine.startPos.y / main.gridSize)
+				region = new Vector2(regionX, regionY);
+				main.input.currentLine.region = region;
+
+				// Push our new line to the lines array, then reset our currentLine variable
 				main.lines.push(main.input.currentLine);
 				main.input.currentLine = undefined;
 				main.input.lastEndPos = endPos;
@@ -644,7 +656,7 @@ var main = {
 
 					main.lines = [];	// reset
 					for (l = 0; l < newarr.length; l++) {
-						main.lines.push(new Line(new Vector2(newarr[l].sx , newarr[l].sy), new Vector2(newarr[l].ex , newarr[l].ey), newarr[l].h, newarr[l].c, newarr[l].n, newarr[l].s));	//startPos, endPos, color, collision, normal, sound
+						main.lines.push(new Line(new Vector2(newarr[l].sx , newarr[l].sy), new Vector2(newarr[l].ex , newarr[l].ey), newarr[l].h, newarr[l].c, newarr[l].n, newarr[l].s, new Vector2(newarr[l].rx, newarr[l].ry)));	//startPos, endPos, color, collision, normal, sound, region
 					}
 
 				}
@@ -671,7 +683,9 @@ var main = {
 							c: line.collision,
 							n: line.normal,
 							s: line.sound,
-							h: line.color
+							h: line.color,
+							rx: line.region.x,
+							ry: line.region.y
 						});
 					}
 
