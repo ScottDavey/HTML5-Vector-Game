@@ -181,6 +181,7 @@ Camera.prototype = {
 
 // Usable images
 var images = [
+	['Blank-2560x1440.jpg', 2560, 1440],
 	['LEVEL_1.png', 1024, 590],
 	['LEVEL_3.jpg', 839, 393],
 	['LEVEL_4.jpg', 1920, 1080],
@@ -246,7 +247,6 @@ var main = {
 		$('#resetBtn').on('click', main.toolBox.reset);
 
 		// Initialize
-		main.LoadGrid();
 		main.bg.LoadImageOptions();
 		this.camera.moveTo(this.cameraPos.x, this.cameraPos.y);
 		setTimeout(function () { main.draw(); }, 1000);	// Hack to get around the fact that the image isn't loaded right away.
@@ -256,8 +256,8 @@ var main = {
 
 		this.grid = [];
 
-		for (y = 0; y < Math.ceil(main.CANVAS_HEIGHT / main.gridSize); y++) {
-			for (x = 0; x < Math.ceil(main.CANVAS_WIDTH / main.gridSize); x++) {
+		for (y = 0; y < Math.ceil(main.WORLD_HEIGHT / main.gridSize); y++) {
+			for (x = 0; x < Math.ceil(main.WORLD_WIDTH / main.gridSize); x++) {
 				this.grid.push(new Texture(new Vector2(x * main.gridSize, y * main.gridSize), new Vector2(main.gridSize, main.gridSize), 'transparent', 1, '#222222'));
 			}
 		}
