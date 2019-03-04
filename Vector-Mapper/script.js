@@ -181,6 +181,7 @@ Camera.prototype = {
 
 // Usable images
 var images = [
+	['7680x720-Charcoal-Background.jpg', 7680, 720],
 	['Blank-2560x1440.jpg', 2560, 1440],
 	['LEVEL_1.png', 1024, 590],
 	['LEVEL_3.jpg', 839, 393],
