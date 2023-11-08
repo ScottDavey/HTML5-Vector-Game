@@ -84,9 +84,17 @@
 					<li class="lineType toggleBtn">WALL</li>
 					<li class="lineType toggleBtn">CEILING</li>
 				</ul>
+				
 				<br />
-				<label for="lineNormal">Line Normal:</label>&nbsp;&nbsp;&nbsp;<input type="text" class="textboxes" id="lineNormal" readonly="true" disabled="disabled" value="-1">
+
+				<label for="lineNormal">Line Normal:</label>&nbsp;&nbsp;&nbsp;
+				<select id="lineNormal" readonly disabled>
+					<option value="-1">UP / LEFT</option>
+					<option value="1">DOWN / RIGHT</option>
+				</select>
+
 				<br /><br />
+
 				<label for="lineSound">Line Sound:</label>&nbsp;&nbsp;&nbsp;<input type="text" id="lineSound" value="WOOD">
 			</div>
 			

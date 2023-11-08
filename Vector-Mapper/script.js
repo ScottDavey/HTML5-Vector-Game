@@ -43,7 +43,7 @@ class Rectangle {
 ***********************/
 class Line {
 	
-	constructor(startPos, endPos, color, collision, normal, sound, region) {
+	constructor(startPos, endPos, color, collision, normal, sound, region, slope = null, yIntercept = null) {
 		this.startPos = startPos;
 		this.endPos = endPos;
 		this.color = color;
@@ -51,6 +51,8 @@ class Line {
 		this.normal = normal;
 		this.sound = sound;
 		this.region = region;
+		this.slope = slope;
+		this.yIntercept = yIntercept;
 	}
 
 	draw() {
@@ -500,6 +502,14 @@ const main = {
 				const region = new Vector2(regionX, regionY);
 				main.input.currentLine.region = region;
 
+				// Calculate our line's slope and y-Intercept
+				if (lineType !== 'WALL') {
+					const slope = (main.input.currentLine.endPos.y - main.input.currentLine.startPos.y) / (main.input.currentLine.endPos.x - main.input.currentLine.startPos.x);
+					const yIntercept = main.input.currentLine.startPos.y - (slope * main.input.currentLine.startPos.x);
+					main.input.currentLine.slope = slope;
+					main.input.currentLine.yIntercept = yIntercept;
+				}
+
 				// Push our new line to the lines array, then reset our currentLine variable
 				main.lines.push(main.input.currentLine);
 				main.input.currentLine = undefined;
@@ -599,21 +609,25 @@ const main = {
 				$('#collision .lineType.active').removeClass('active');
 				that.addClass('active');
 
-				if (val === 'FLOOR') {
-					lineNormal.attr({'readonly': true, 'disabled': true});
-					lineNormal.val(-1);
-					lineSound.attr({'readonly': false, 'disabled': false});
-					lineSound.val('WOOD');
-				} else if (val === 'CEILING') {
-					lineNormal.attr({'readonly': true, 'disabled': true});
-					lineNormal.val(1);
-					lineSound.attr({'readonly': true, 'disabled': true});
-					lineSound.val('');
-				} else {
+				if (val === 'WALL') {
 					lineNormal.attr({'readonly': false, 'disabled': false});
 					lineNormal.val(1);
 					lineSound.attr({'readonly': true, 'disabled': true});
 					lineSound.val('');
+				} else {
+
+					if (val === 'FLOOR') {
+						lineNormal.attr({'readonly': true, 'disabled': true});
+						lineNormal.val(-1);
+						lineSound.attr({'readonly': false, 'disabled': false});
+						lineSound.val('WOOD');
+					} else if (val === 'CEILING') {
+						lineNormal.attr({'readonly': true, 'disabled': true});
+						lineNormal.val(1);
+						lineSound.attr({'readonly': true, 'disabled': true});
+						lineSound.val('');
+					}
+
 				}
 			}
 		},
@@ -667,9 +681,21 @@ const main = {
 
 					const newarr = JSON.parse(val);
 
-					main.lines = [];	// reset
+					main.lines = []; // reset
 					for (let l = 0; l < newarr.length; l++) {
-						main.lines.push(new Line(new Vector2(newarr[l].sx , newarr[l].sy), new Vector2(newarr[l].ex , newarr[l].ey), newarr[l].h, newarr[l].c, newarr[l].n, newarr[l].s, new Vector2(newarr[l].rx, newarr[l].ry)));	//startPos, endPos, color, collision, normal, sound, region
+						main.lines.push(
+							new Line(
+								new Vector2(newarr[l].sx, newarr[l].sy),	// StartPos
+								new Vector2(newarr[l].ex , newarr[l].ey),	// EndPos
+								newarr[l].h,								// Color
+								newarr[l].c,								// Collision
+								newarr[l].n,								// Normal
+								newarr[l].s,								// Sound
+								new Vector2(newarr[l].rx, newarr[l].ry),	// Region
+								newarr[l].sl,								// slope
+								newarr[l].b									// yIntercept
+							)
+						);
 					}
 
 				}
@@ -698,7 +724,9 @@ const main = {
 							s: line.sound,
 							h: line.color,
 							rx: line.region.x,
-							ry: line.region.y
+							ry: line.region.y,
+							sl: line.slope,
+							b: line.yIntercept,
 						});
 					}
 

@@ -22,7 +22,7 @@ select { width: 100%; padding:5px; }
 #toolBox .section { padding:20px; border-bottom:1px solid #000000; }
 #toolBox .section .label { width:50%; color: #efcd86; }
 
-#toolBox #collision #lineNormal { width:25px; text-align:center; }
+#toolBox #collision #lineNormal { width:50%; }
 #toolBox #collision #lineSound { width:128px; }
 #toolBox #collision .toggleBtn { list-style:none; width:57px; padding:5px 10px; margin-left:5px; background-color:#222222; text-align:center; font-size:10pt; border:1px solid #000000; float:left; cursor:pointer; }
 #toolBox #collision .toggleBtn.active { background-color:#D5971D; color:#000000; }
