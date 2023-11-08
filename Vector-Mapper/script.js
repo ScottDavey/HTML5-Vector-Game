@@ -2,7 +2,7 @@
 *****  ULILITIES  *****
 **********************/
 
-var Vector2 = function(x, y) {
+const Vector2 = function(x, y) {
     this.x = x;
     this.y = y;
 };
@@ -12,139 +12,157 @@ function random(min, max) {
 }
 
 function SecondsToTime (sec) {
-	var h, m, s;
-	s = Number(sec);
-	h = Math.floor(s / 3600);
-	m = Math.floor(s % 3600 / 60);
-	s = Math.floor(s % 3600 % 60);
+	const h = Math.floor(s / 3600);
+	const m = Math.floor(s % 3600 / 60);
+	const s = Math.floor(Number(sec) % 3600 % 60);
 	return ((h > 0 ? h + ":" + (m < 10 ? "0" : "") : "") + m + ":" + (s < 10 ? "0" : "") + s);
 }
 
 /****************************
 *****  RECTANGLE CLASS  *****
 ****************************/
-function Rectangle (x, y, width, height) {
-	this.x		= x;
-	this.y		= y;
-	this.width	= width;
-	this.height	= height;
-	this.left	= this.x;
-	this.top	= this.y;
-	this.right	= this.x + this.width;
-	this.bottom	= this.y + this.height;
-	this.center	= new Vector2((this.x + (this.width/2)), (this.y + (this.height/2)));
-	this.halfSize = new Vector2((this.width / 2), (this.height / 2));
+class Rectangle {
+	
+	constructor (x, y, width, height) {
+		this.x = x;
+		this.y = y;
+		this.width = width;
+		this.height = height;
+		this.left = this.x;
+		this.top = this.y;
+		this.right = this.x + this.width;
+		this.bottom = this.y + this.height;
+		this.center = new Vector2((this.x + (this.width/2)), (this.y + (this.height/2)));
+		this.halfSize = new Vector2((this.width / 2), (this.height / 2));
+	}
+
 }
 
 /***********************
 *****  LINE CLASS  *****
 ***********************/
-function Line (startPos, endPos, color, collision, normal, sound, region) {
-	this.startPos = startPos;
-	this.endPos = endPos;
-	this.color = color;
-	this.collision = collision;
-	this.normal = normal;
-	this.sound = sound;
-	this.region = region;
-}
+class Line {
+	
+	constructor(startPos, endPos, color, collision, normal, sound, region) {
+		this.startPos = startPos;
+		this.endPos = endPos;
+		this.color = color;
+		this.collision = collision;
+		this.normal = normal;
+		this.sound = sound;
+		this.region = region;
+	}
 
-Line.prototype.draw = function () {
-	main.context.save();
-	main.context.lineWidth = 2;
-	main.context.strokeStyle = (typeof this.color === 'undefined') ? '#00FF88' : this.color;
-	main.context.beginPath();
-	main.context.moveTo(this.startPos.x, this.startPos.y);
-	main.context.lineTo(this.endPos.x, this.endPos.y);
-	main.context.stroke();
-	main.context.closePath();
-	main.context.restore();
-};
+	draw() {
+		main.context.save();
+		main.context.lineWidth = 2;
+		main.context.strokeStyle = (typeof this.color === 'undefined') ? '#00FF88' : this.color;
+		main.context.beginPath();
+		main.context.moveTo(this.startPos.x, this.startPos.y);
+		main.context.lineTo(this.endPos.x, this.endPos.y);
+		main.context.stroke();
+		main.context.closePath();
+		main.context.restore();
+	}
+
+}
 
 /**************************
 *****  TEXTURE CLASS  *****
 **************************/
-function Texture (pos, size, fillColor, lineWidth, lineColor)  {
-	this.pos		= pos;
-	this.size		= size;
-	this.fillColor	= fillColor;
-	this.lineColor	= lineColor;
+class Texture {
+	constructor(pos, size, fillColor, lineWidth, lineColor) {
+		this.pos = pos;
+		this.size = size;
+		this.fillColor = fillColor;
+		this.lineColor = lineColor;
+	}
+
+	update(pos) {
+		this.pos = pos;
+	};
+	
+	draw() {
+		main.context.save();
+		main.context.beginPath();
+		main.context.rect(this.pos.x, this.pos.y, this.size.x, this.size.y);
+		main.context.fillStyle = this.fillColor;
+		main.context.fill();
+		main.context.lineWidth = this.lineWidth;
+		main.context.strokeStyle = this.lineColor;
+		main.context.stroke();
+		main.context.closePath();
+		main.context.restore();
+	};
+
 }
-
-Texture.prototype.update = function (pos) {
-	this.pos = pos;
-};
-
-Texture.prototype.draw = function () {
-	main.context.save();
-	main.context.beginPath();
-	main.context.rect(this.pos.x, this.pos.y, this.size.x, this.size.y);
-	main.context.fillStyle = this.fillColor;
-	main.context.fill();
-	main.context.lineWidth = this.lineWidth;
-	main.context.strokeStyle = this.lineColor;
-	main.context.stroke();
-	main.context.closePath();
-	main.context.restore();
-};
 
 /*************************
 *****  SPRITE CLASS  *****
 *************************/
-function Sprite (path, pos, size) {
-	this.pos	= pos;
-	this.size	= size;
-	this.img	= document.createElement('img');
-	this.img.setAttribute('src', path);
+class Sprite {
+
+	constructor(path, pos, size) {
+		this.pos = pos;
+		this.size = size;
+		this.img = document.createElement('img');
+		this.img.setAttribute('src', path);
+	}
+
+	SetImage(path) {
+		this.img.setAttribute('src', path);
+	}
+	
+	update(pos) {
+		this.pos = pos;
+	}
+	
+	draw() {
+		main.context.drawImage(this.img, this.pos.x, this.pos.y);
+	}
+
 }
-
-Sprite.prototype.SetImage = function (path) {
-	this.img.setAttribute('src', path);
-};
-
-Sprite.prototype.update = function (pos) {
-	this.pos	= pos;
-};
-
-Sprite.prototype.draw = function () {
-	main.context.drawImage(this.img, this.pos.x, this.pos.y);
-};
 
 /*******************************************
 **************  CAMERA CLASS  **************
 *******************************************/
-function Camera () {
-	this.distance	= 0.0;
-	this.lookat	= [0, 0];
-	this.fieldOfView = Math.PI / 4.0;
-	this.viewport = {
-		left: 0,
-		right: 0,
-		top: 0,
-		bottom: 0,
-		width: 0,
-		height: 0,
-		scale: [1.0, 1.0]
-	};
-	this.updateViewport();
-}
+class Camera {
+	
+	constructor() {
+		this.distance	= 0.0;
+		this.lookat	= [0, 0];
+		this.fieldOfView = Math.PI / 4.0;
+		this.viewport = {
+			left: 0,
+			right: 0,
+			top: 0,
+			bottom: 0,
+			width: 0,
+			height: 0,
+			scale: [1.0, 1.0]
+		};
+		this.updateViewport();
+	}
 
-Camera.prototype = {
-	begin: function () {
+	begin() {
 		main.context.save();
 		this.applyScale();
 		this.applyTranslation();
-	},
-	end: function () {
+	}
+	
+	end() {
 		main.context.restore();
-	},
-	applyScale: function () {
+	}
+
+	applyScale() {
 		main.context.scale(this.viewport.scale[0],this.viewport.scale[1]);
-	},
-	applyTranslation: function () {
+	}
+	
+	applyTranslation() {
 		main.context.translate(-this.viewport.left, -this.viewport.top);
-	},
-	updateViewport: function () {
+	}
+		
+	updateViewport() {
 		this.aspectRatio = main.CANVAS_WIDTH / main.CANVAS_HEIGHT;
 		this.viewport.width = this.distance * Math.tan(this.fieldOfView);
 		this.viewport.height = this.viewport.width / this.aspectRatio;
@@ -154,33 +172,38 @@ Camera.prototype = {
 		this.viewport.bottom = this.viewport.top + this.viewport.height;
 		this.viewport.scale[0] = main.CANVAS_WIDTH / this.viewport.width;
 		this.viewport.scale[1] = main.CANVAS_HEIGHT / this.viewport.height;
-	},
-	zoomTo: function (z) {
+	}
+
+	zoomTo(z) {
 		this.distance = z;
 		this.updateViewport();
-	},
-	moveTo: function (x, y) {
+	}
+
+	moveTo(x, y) {
 		this.lookat[0] = x;
 		this.lookat[1] = y;
 		this.updateViewport();
 		main.draw();
-	},
-	screenToWorld: function (x, y, obj) {
+	}
+
+	screenToWorld(x, y, obj) {
 		obj = obj || {};
 		obj.x = (x / this.viewport.scale[0]) + this.viewport.left;
 		obj.y = (y / this.viewport.scale[1]) + this.viewport.top;
 		return obj;
-	},
-	worldToScreen: function (x, y, obj) {
+	}
+
+	worldToScreen(x, y, obj) {
 		obj = obj || {};
 		obj.x = (x - this.viewport.left) * (this.viewport.scale[0]);
 		obj.y = (y - this.viewport.top) * (this.viewport.scale[1]);
 		return obj;
 	}
-};
+
+}
 
 // Usable images
-var images = [
+const images = [
 	['7680x720-Charcoal-Background.jpg', 7680, 720],
 	['Blank-2560x1440.jpg', 2560, 1440],
 	['LEVEL_1.png', 1024, 590],
@@ -196,7 +219,7 @@ var images = [
 /*****************
 *****  MAIN  *****
 *****************/
-var main = {
+const main = {
 	init: function () {
 		this.CANVAS_WIDTH = 1280;
 		this.CANVAS_HEIGHT = 720;
@@ -253,21 +276,20 @@ var main = {
 		setTimeout(function () { main.draw(); }, 1000);	// Hack to get around the fact that the image isn't loaded right away.
 	},
 	LoadGrid: function () {
-		var x, y;
-
 		this.grid = [];
 
-		for (y = 0; y < Math.ceil(main.WORLD_HEIGHT / main.gridSize); y++) {
-			for (x = 0; x < Math.ceil(main.WORLD_WIDTH / main.gridSize); x++) {
+		for (let y = 0; y < Math.ceil(main.WORLD_HEIGHT / main.gridSize); y++) {
+			for (let x = 0; x < Math.ceil(main.WORLD_WIDTH / main.gridSize); x++) {
 				this.grid.push(new Texture(new Vector2(x * main.gridSize, y * main.gridSize), new Vector2(main.gridSize, main.gridSize), 'transparent', 1, '#222222'));
 			}
 		}
 	},
 	bg: {
 		LoadImageOptions: function () {
-			var imgSelect, i, filename;
-			imgSelect = $('#background #img');
-			for (i = 0; i < images.length; i++) {
+			const imgSelect = $('#background #img');
+			let filename;
+
+			for (let i = 0; i < images.length; i++) {
 				filename = images[i][0].split('.');
 				filename = filename[0];
 				imgSelect.append(
@@ -282,10 +304,9 @@ var main = {
 			imgSelect.trigger('change');
 		},
 		onImgChange: function () {
-			var that, selected, val, width, height, docWidth, docHeight;
-			that = $(this);
-			selected = that.find('option:selected');
-			val = that.val();
+			const that = $(this);
+			const selected = that.find('option:selected');
+			const val = that.val();
 			// Trigger a blur on the select box
 			that.trigger('blur');
 
@@ -301,10 +322,10 @@ var main = {
 			main.lines = [];
 			this.grid = [];
 
-			width = selected.data('width');
-			height = selected.data('height');
-			docWidth = $(document).width() - 301;
-			docHeight = $(document).height() - 5;
+			const width = selected.data('width');
+			const height = selected.data('height');
+			const docWidth = $(document).width() - 301;
+			const docHeight = $(document).height() - 5;
 			
 			// Reset Dimensions
 			main.WORLD_WIDTH = width;
@@ -325,7 +346,7 @@ var main = {
 		lastEndPos: undefined,
 		keys: [],
 		onMouseDown: function (e) {
-			var x, y;
+			let x, y;
 			x = e.offsetX;
 			y = e.offsetY;
 			// Correct the mouse positioning if the canvas has been panned
@@ -351,11 +372,10 @@ var main = {
 			main.isMouseDown = false;
 		},
 		onMouseMove: function (e) {
-			var x, y, xPanned, yPanned;
-			x = e.offsetX;
-			y = e.offsetY;
-			xPanned = x + main.cameraPos.x;
-			yPanned = y + main.cameraPos.y;
+			const x = e.offsetX;
+			const y = e.offsetY;
+			const xPanned = x + main.cameraPos.x;
+			const yPanned = y + main.cameraPos.y;
 
 			// Update info with mouse coordinates (taking camera pannging into account)
 			$('#mouseX').text(xPanned);
@@ -376,8 +396,7 @@ var main = {
 			}
 		},
 		onKeyDown: function (e) {
-			var key;
-			key = e.key;
+			const key = e.key;
 
 			main.input.keys[key] = true;
 
@@ -395,8 +414,7 @@ var main = {
 
 		},
 		onKeyUp: function (e) {
-			var key;
-			key = e.key;
+			const key = e.key;
 			main.input.keys[key] = false;
 
 			if (key === 'Control') {
@@ -411,10 +429,9 @@ var main = {
 	},
 	fnCamera: {
 		pan: function (x, y, xPanned, yPanned) {
-			var mouseXDiff, mouseYDiff;
 			// Get the difference between current mouse position and previous
-			mouseXDiff = x - main.previousMousePos.x;
-			mouseYDiff = y - main.previousMousePos.y;
+			const mouseXDiff = x - main.previousMousePos.x;
+			const mouseYDiff = y - main.previousMousePos.y;
 			// apply the difference to the camera position variable
 			main.cameraPos.x -= mouseXDiff;
 			main.cameraPos.y -= mouseYDiff;
@@ -436,20 +453,20 @@ var main = {
 	},
 	line: {
 		add: function (x, y) {
-			var lineType, lineNormal, lineSound, lineColor, dX, dY, coordDiff, regionX, regionY, region, startPos, endPos;
+			let coordDiff, startPos, endPos;
 
-			lineType = $('.lineType.active').text();
-			lineSound = $('#lineSound').val();
+			const lineType = $('.lineType.active').text();
+			const lineSound = $('#lineSound').val();
 
 			if (typeof main.input.currentLine === 'undefined') {
 				// Begin creating our new line
-				lineNormal = $('#lineNormal').val();
-				lineColor = (lineType === 'FLOOR') ? '#9F0313' : (lineType === 'CEILING' ? '#0E72D5' : '#02AA30');
+				const lineNormal = $('#lineNormal').val();
+				const lineColor = (lineType === 'FLOOR') ? '#9F0313' : (lineType === 'CEILING' ? '#0E72D5' : '#02AA30');
 				coordDiff = 6;
 				// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
 				if (main.allowSnapping && typeof main.input.lastEndPos !== 'undefined') {
-					dX = (main.input.lastEndPos.x - x);
-					dY = (main.input.lastEndPos.y - y);
+					const dX = (main.input.lastEndPos.x - x);
+					const dY = (main.input.lastEndPos.y - y);
 					coordDiff = Math.sqrt(dX*dX + dY*dY);
 				}
 				// If the difference is less than specified, snap it.
@@ -478,9 +495,9 @@ var main = {
 				}
 
 				// Based on the line's start position, calculate what region it's in
-				regionX = Math.floor(main.input.currentLine.startPos.x / main.gridSize); 
-				regionY = Math.floor(main.input.currentLine.startPos.y / main.gridSize)
-				region = new Vector2(regionX, regionY);
+				const regionX = Math.floor(main.input.currentLine.startPos.x / main.gridSize); 
+				const regionY = Math.floor(main.input.currentLine.startPos.y / main.gridSize)
+				const region = new Vector2(regionX, regionY);
 				main.input.currentLine.region = region;
 
 				// Push our new line to the lines array, then reset our currentLine variable
@@ -501,21 +518,21 @@ var main = {
 		},
 		erase: {
 			line: function (x, y) {
-				var l, line, slope, b, yc, bounds, eraseLine;
+				let bounds, eraseLine;
 
 				bounds = new Rectangle(x-5, y-5, 10, 10);	// give a 10 pixel buffer and offset it so the click point is the center
 				eraseLine = false;
 
 				// Loop through lines and figure out whether or not we're intersecting
-				for (l = 0; l < main.lines.length; l++) {
+				for (let l = 0; l < main.lines.length; l++) {
 
-					line = main.lines[l];
+					const line = main.lines[l];
 
 					if ((line.collision == 'FLOOR' || line.collision == 'CEILING') && bounds.center.x >= line.startPos.x && bounds.center.x <= line.endPos.x) {
 
-						slope = (line.endPos.y - line.startPos.y) / (line.endPos.x - line.startPos.x);
-						b = line.startPos.y - (slope * line.startPos.x);
-						yc = (slope * bounds.center.x) + b;
+						const slope = (line.endPos.y - line.startPos.y) / (line.endPos.x - line.startPos.x);
+						const b = line.startPos.y - (slope * line.startPos.x);
+						const yc = (slope * bounds.center.x) + b;
 
 						if (Math.abs(yc - bounds.center.y) <= bounds.halfSize.y) {
 							eraseLine = true;
@@ -523,7 +540,7 @@ var main = {
 
 					} else if (line.collision == 'WALL' && bounds.center.y > line.startPos.y && bounds.center.y < line.endPos.y) {
 
-						xDiff = Math.abs(bounds.center.x - line.startPos.x);
+						const xDiff = Math.abs(bounds.center.x - line.startPos.x);
 
 						if (xDiff <= bounds.halfSize.x) {
 							eraseLine = true;
@@ -554,10 +571,9 @@ var main = {
 	toolBox: {
 		properties: {
 			onChange: function () {
-				var that, val, isChecked;
-				that = $(this);
-				val = that.val();
-				isChecked = (that.is(':checked'));
+				const that = $(this);
+				const val = that.val();
+				const isChecked = (that.is(':checked'));
 
 				if (val === 'background') {
 					main.showBackground = isChecked;
@@ -575,11 +591,10 @@ var main = {
 		},
 		collision: {
 			onLineTypeChange: function () {
-				var that, val, lineNormal, lineSound;
-				that = $(this);
-				val = that.text();
-				lineNormal = $('#lineNormal');
-				lineSound = $('#lineSound');
+				const that = $(this);
+				const val = that.text();
+				const lineNormal = $('#lineNormal');
+				const lineSound = $('#lineSound');
 
 				$('#collision .lineType.active').removeClass('active');
 				that.addClass('active');
@@ -604,21 +619,19 @@ var main = {
 		},
 		dialog: {
 			show: function (data) {
-				var dialog, headerArea, contentArea, saveBtn, cancelBtn, overlay, title, content, showSaveBtn, mainColor;
+				const title = (typeof data.title === 'undefined') ? 'DIALOG' : data.title;
+				const content = (typeof data.content === 'undefined') ? '' : data.content;
+				const showSave = (typeof data.showSave === 'undefined') ? false : data.showSave;
+				const mainColor = (title === 'LOAD') ? '#C68A0D' : (title === 'EXPORT' ? '#11BE41' : '#F11B2B');
 
-				title = (typeof data.title === 'undefined') ? 'DIALOG' : data.title;
-				content = (typeof data.content === 'undefined') ? '' : data.content;
-				showSave = (typeof data.showSave === 'undefined') ? false : data.showSave;
-				mainColor = (title === 'LOAD') ? '#C68A0D' : (title === 'EXPORT' ? '#11BE41' : '#F11B2B');
-
-				dialog = $('#dialog');
-				headerArea = $('#dialogHeader');
+				const dialog = $('#dialog');
+				const headerArea = $('#dialogHeader');
 				headerArea.css('background-color', mainColor);
-				contentArea = $('#dialogTextarea');
-				saveBtn = $('#dialogSaveBtn');
+				const contentArea = $('#dialogTextarea');
+				const saveBtn = $('#dialogSaveBtn');
 				saveBtn.css('background-color', mainColor);
-				closeBtn = $('#dialogCloseBtn');
-				overlay = $('#dialogOverlay');
+				const closeBtn = $('#dialogCloseBtn');
+				const overlay = $('#dialogOverlay');
 
 				if (showSave) {
 					saveBtn.on('click', main.toolBox.load.save);
@@ -645,18 +658,17 @@ var main = {
 				main.toolBox.dialog.show({title: 'LOAD', showSave: true});
 			},
 			save: function () {
-				var content, val, newarr, l;
-				content = $('#dialogTextarea');
-				val = content.val();
+				const content = $('#dialogTextarea');
+				const val = content.val();
 
 				if (val.length === 0) {
 					content.css('background-color', '#FF9999');
 				} else {
 
-					newarr = JSON.parse(val);
+					const newarr = JSON.parse(val);
 
 					main.lines = [];	// reset
-					for (l = 0; l < newarr.length; l++) {
+					for (let l = 0; l < newarr.length; l++) {
 						main.lines.push(new Line(new Vector2(newarr[l].sx , newarr[l].sy), new Vector2(newarr[l].ex , newarr[l].ey), newarr[l].h, newarr[l].c, newarr[l].n, newarr[l].s, new Vector2(newarr[l].rx, newarr[l].ry)));	//startPos, endPos, color, collision, normal, sound, region
 					}
 
@@ -669,12 +681,12 @@ var main = {
 		},
 		export : {
 			output: function () {
-				var l, line, newarr = [], stringified = '';
+				const newarr = [];
 
 				if (main.lines.length > 0) {
 
-					for (l = 0; l < main.lines.length; l++) {
-						line = main.lines[l];
+					for (let l = 0; l < main.lines.length; l++) {
+						const line = main.lines[l];
 
 						newarr.push({
 							sx: line.startPos.x,
@@ -690,7 +702,7 @@ var main = {
 						});
 					}
 
-					stringified = JSON.stringify(newarr);
+					const stringified = JSON.stringify(newarr);
 
 					main.toolBox.dialog.show({title: 'EXPORT', content: stringified, showSave: false});
 
@@ -707,19 +719,18 @@ var main = {
 		}
 	},
 	draw: function () {
-		var g, l;
 		main.context.clearRect(0, 0, main.CANVAS_WIDTH, main.CANVAS_HEIGHT);
 
 		main.camera.begin();
 		
 		if (typeof main.background !== 'undefined' && main.showBackground) main.background.draw();
 		if (main.showGrid) {
-			for (g = 0; g < main.grid.length; g++) {
+			for (let g = 0; g < main.grid.length; g++) {
 				main.grid[g].draw();
 			}
 		}
 		if (main.showLines) {
-			for (l = 0; l < main.lines.length; l++) {
+			for (let l = 0; l < main.lines.length; l++) {
 				main.lines[l].draw();
 			}
 
