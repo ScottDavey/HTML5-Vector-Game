@@ -36,6 +36,23 @@ class Rectangle {
 		this.halfSize = new Vector2((this.width / 2), (this.height / 2));
 	}
 
+	GetIntersectionDepth(rect) {
+        const distanceX = this.center.x - rect.center.x;
+        const distanceY = this.center.y - rect.center.y;
+        const minDistanceX = this.halfSize.x + rect.halfSize.x;
+        const minDistanceY = this.halfSize.y + rect.halfSize.y;
+
+        // If we are not intersecting, return (0, 0)
+        if (Math.abs(distanceX) >= minDistanceX || Math.abs(distanceY) >= minDistanceY)
+            return new Vector2(0, 0);
+
+        // Calculate and return intersection depths
+        const depthX = distanceX > 0 ? minDistanceX - distanceX : -minDistanceX - distanceX;
+        const depthY = distanceY > 0 ? minDistanceY - distanceY : -minDistanceY - distanceY;
+
+        return new Vector2(depthX, depthY);
+    }
+
 }
 
 /***********************
@@ -76,13 +93,23 @@ class Texture {
 	constructor(pos, size, fillColor, lineWidth, lineColor) {
 		this.pos = pos;
 		this.size = size;
+		this.lineWidth = lineWidth;
 		this.fillColor = fillColor;
 		this.lineColor = lineColor;
 	}
 
-	update(pos) {
+	updatePos(pos) {
 		this.pos = pos;
 	};
+
+	updateSize(size) {
+		this.size = size;
+	}
+	
+	updateColor(fillColor, lineColor) {
+		this.fillColor = fillColor;
+		this.lineColor = lineColor;
+	}
 	
 	draw() {
 		main.context.save();
@@ -100,15 +127,95 @@ class Texture {
 }
 
 /*************************
+*****  ENTITY CLASS  *****
+*************************/
+
+class Entity {
+	constructor(pos, size, fillColor, lineWidth, lineColor) {
+		this.pos = pos;
+		this.size = size;
+		this.fillColor = fillColor;
+		this.lineColor = lineColor;
+		this.lineWidth = lineWidth;
+		this.rect = new Texture(new Vector2(pos.x, pos.y), new Vector2(size.x, size.y), this.fillColor, this.lineWidth, this.lineColor);
+	}
+
+	draw() {
+		this.rect.draw();
+	}
+}
+
+class Player extends Entity {
+
+	constructor(pos, size, fillColor, lineWidth, lineColor) {
+		super(pos, size, fillColor, lineWidth, lineColor);
+	}
+
+	draw() {
+		super.draw();
+	}
+}
+
+class NPC extends Entity {
+
+	constructor(pos, size, fillColor, lineWidth, lineColor, region = new Rectangle(0, 0, 0, 0)) {
+		super(pos, size, fillColor, lineWidth, lineColor);
+		this.region = region;
+	}
+
+	draw() {
+		super.draw();
+	}
+}
+
+/**********************************
+*****  COLLISION EVENT CLASS  *****
+**********************************/
+
+class CollisionEvent {
+	constructor(type, name, texture) {
+		this.type = type;
+		this.name = name;
+		this.texture = texture;
+	}
+
+	getPos() {
+		return this.texture.pos;
+	}
+
+	getSize() {
+		return this.texture.size;
+	}
+
+	updatePos(pos) {
+		this.texture.updatePos(pos);
+	}
+
+	updateSize(size) {
+		this.texture.updateSize(size);
+	}
+
+	draw() {
+		this.texture.draw();
+	}
+}
+
+/*************************
 *****  SPRITE CLASS  *****
 *************************/
 class Sprite {
 
 	constructor(path, pos, size) {
+		const pathSplit = path.split('/');
+		this.filename = pathSplit[pathSplit.length - 1];
 		this.pos = pos;
 		this.size = size;
 		this.img = document.createElement('img');
 		this.img.setAttribute('src', path);
+	}
+
+	getFilename() {
+		return this.filename;
 	}
 
 	SetImage(path) {
@@ -125,13 +232,46 @@ class Sprite {
 
 }
 
-/*******************************************
-**************  CAMERA CLASS  **************
-*******************************************/
+class Background extends Sprite {
+
+	constructor(path, pos, size, parralaxScroll) {
+		super(path, pos, size);
+		this.parralaxScroll = parralaxScroll;
+	}
+
+	getFilename() {
+		return super.getFilename();
+	}
+
+	getParralaxScroll() {
+		return this.parralaxScroll;
+	}
+
+	setParralax(val) {
+		this.parralaxScroll = val;
+	}
+
+	SetImage(path) {
+		super.SetImage(path);
+	}
+
+	update(pos) {
+		super.update(pos);
+	}
+
+	draw() {
+		super.draw();
+	}
+
+}
+
+/*************************
+*****  CAMERA CLASS  *****
+*************************/
 class Camera {
 	
 	constructor() {
-		this.distance	= 0.0;
+		this.distance = 0.0;
 		this.lookat	= [0, 0];
 		this.fieldOfView = Math.PI / 4.0;
 		this.viewport = {
@@ -179,6 +319,7 @@ class Camera {
 	zoomTo(z) {
 		this.distance = z;
 		this.updateViewport();
+		main.draw();
 	}
 
 	moveTo(x, y) {
@@ -204,569 +345,1491 @@ class Camera {
 
 }
 
-// Usable images
-const images = [
-	['7680x720-Charcoal-Background.jpg', 7680, 720],
-	['Blank-2560x1440.jpg', 2560, 1440],
-	['LEVEL_1.png', 1024, 590],
-	['LEVEL_3.jpg', 839, 393],
-	['LEVEL_4.jpg', 1920, 1080],
-	['LEVEL_4_Sized.jpg', 1280, 720],
-	['LEVEL_5.jpg', 1200, 675],
-	['LEVEL_6.jpg', 1280, 720],
-	['halloween_by_unidcolor-d5h7jmg4.jpg', 3600, 1050],
-	['Proxima.png', 3840, 1080]
-];
-
 /*****************
 *****  MAIN  *****
 *****************/
+
 const main = {
 	init: function () {
-		this.CANVAS_WIDTH = 1280;
-		this.CANVAS_HEIGHT = 720;
-		this.WORLD_WIDTH = 1280;
-		this.WORLD_HEIGHT = 720;
+		this.CANVAS_WIDTH = 0;
+		this.CANVAS_HEIGHT = 0;
+		this.WORLD_WIDTH = 0;
+		this.WORLD_HEIGHT = 0;
 		this.canvas = document.getElementById('canvas');
 		this.jCanvas = $('#canvas');
 		this.canvas.width = this.CANVAS_WIDTH;
 		this.canvas.height = this.CANVAS_HEIGHT;
 		this.context = this.canvas.getContext('2d');
-		this.camera = new Camera();
-		this.cameraPos = new Vector2(0, 0);
-		this.showBackground = true;
-		this.showGrid = false;
-		this.allowSnapping = true;
-		this.showLines = true;
-		this.background = undefined;
-		this.grid = [];
-		this.gridSize = 500;
-		this.lines = [];
-		this.lineType = 'FLOOR';
-		this.lineNormal = -1;
+		this.isToolBoxShowing = true;
 
-		this.selected_tool = 'normal';
-		this.isMouseDown = false;
-		this.isSpaceDown = false;
-		this.isCtrlDown = false;
-		this.previousMousePos = new Vector2(0, 0);
-
-		this.canvasSizeInfo = $('#canvasSize');
-		this.wrapper = $('#wrapper');
-		this.content = $('#content');
-
-		// this.wrapper.css('width', this.CANVAS_WIDTH);
-		this.content.css({'width': this.CANVAS_WIDTH, 'height': this.CANVAS_HEIGHT});
-		this.canvasSizeInfo.text(this.WORLD_WIDTH + 'x, ' + this.WORLD_HEIGHT + 'y');
-
-		// Event Handlers
-		this.canvas.addEventListener('mousedown', function (e) { main.input.onMouseDown(e); }, false);
-		this.canvas.addEventListener('mouseup', function (e) { main.input.onMouseUp(e); }, false);
-		this.canvas.addEventListener('mousemove', function (e) { main.input.onMouseMove(e); }, false);
-		document.addEventListener('keydown', function (e) { main.input.onKeyDown(e); }, false);
-		document.addEventListener('keyup', function (e) { main.input.onKeyUp(e); }, false);
-		$('#background #img').on('change', main.bg.onImgChange);
-		$('#properties .checkboxes').on('change', main.toolBox.properties.onChange);
-		$('#collision .lineType').on('click', main.toolBox.collision.onLineTypeChange);
-		$('#loadBtn').on('click', main.toolBox.load.init);
-		$('#exportBtn').on('click', main.toolBox.export.output);
-		$('#resetBtn').on('click', main.toolBox.reset);
-
+		// this.grid = [];
+		// this.gridSize = 500;
+		
 		// Initialize
-		main.bg.LoadImageOptions();
-		this.camera.moveTo(this.cameraPos.x, this.cameraPos.y);
-		setTimeout(function () { main.draw(); }, 1000);	// Hack to get around the fact that the image isn't loaded right away.
-	},
-	LoadGrid: function () {
-		this.grid = [];
-
-		for (let y = 0; y < Math.ceil(main.WORLD_HEIGHT / main.gridSize); y++) {
-			for (let x = 0; x < Math.ceil(main.WORLD_WIDTH / main.gridSize); x++) {
-				this.grid.push(new Texture(new Vector2(x * main.gridSize, y * main.gridSize), new Vector2(main.gridSize, main.gridSize), 'transparent', 1, '#222222'));
-			}
-		}
-	},
-	bg: {
-		LoadImageOptions: function () {
-			const imgSelect = $('#background #img');
-			let filename;
-
-			for (let i = 0; i < images.length; i++) {
-				filename = images[i][0].split('.');
-				filename = filename[0];
-				imgSelect.append(
-					$('<option />')
-						.data({width: images[i][1], height: images[i][2]})
-						.val(images[i][0])
-						.html(filename)
-				);
-			}
-
-			// trigger a change event
-			imgSelect.trigger('change');
-		},
-		onImgChange: function () {
-			const that = $(this);
-			const selected = that.find('option:selected');
-			const val = that.val();
-			// Trigger a blur on the select box
-			that.trigger('blur');
-
-			// If this is the first time, create the background sprite.
-			// Else, set the background image of our sprite
-			if (typeof main.background === 'undefined') {
-				main.background = new Sprite('images/' + val, new Vector2(0, 0));
-			} else {
-				main.background.SetImage('images/' + val);
-			}
-
-			// Reset some variables
-			main.lines = [];
-			this.grid = [];
-
-			const width = selected.data('width');
-			const height = selected.data('height');
-			const docWidth = $(document).width() - 301;
-			const docHeight = $(document).height() - 5;
-			
-			// Reset Dimensions
-			main.WORLD_WIDTH = width;
-			main.WORLD_HEIGHT = height;
-			main.CANVAS_WIDTH = (main.WORLD_WIDTH > docWidth) ? docWidth : main.WORLD_WIDTH;
-			main.CANVAS_HEIGHT = (main.WORLD_HEIGHT > docHeight) ? docHeight : main.WORLD_HEIGHT;
-			// Apply dimensions
-			main.canvas.width = main.CANVAS_WIDTH;
-			main.canvas.height = main.CANVAS_HEIGHT;
-			main.canvasSizeInfo.text(width + 'x, ' + height + 'y');
-			main.camera.updateViewport();
-			setTimeout(function () { main.draw(); }, 1000);
-			main.LoadGrid();
-		}
+		main.input.init();
+		main.camera.init();
+		main.modes.init();
+		main.finalization.init();
+		
+		setTimeout(() => main.draw(), 1000);	// Hack to get around the fact that the image isn't loaded right away.
 	},
 	input: {
-		currentLine: undefined,
-		lastEndPos: undefined,
+		previousMousePos: undefined,
+		currentMousePos: undefined,
+		isMouseDown: false,
+		isSpaceDown: false,
+		isCtrlDown: false,
+		isShiftDown: false,
 		keys: [],
-		onMouseDown: function (e) {
-			let x, y;
-			x = e.offsetX;
-			y = e.offsetY;
+		init() {
+			main.input.previousMousePos = new Vector2(0, 0);
+			main.canvas.addEventListener('mousedown', e => main.input.onMouseDown(e), false);
+			main.canvas.addEventListener('mouseup', e => main.input.onMouseUp(e), false);
+			main.canvas.addEventListener('mousemove', e => main.input.onMouseMove(e), false);
+			main.canvas.addEventListener('wheel', e => main.input.onMouseWheel(e), false);
+			document.addEventListener('keydown', e => main.input.onKeyDown(e), false);
+			document.addEventListener('keyup', e => main.input.onKeyUp(e), false);
+		},
+		onMouseDown(e) {
 			// Correct the mouse positioning if the canvas has been panned
-			x = (x + main.cameraPos.x);
-			y = (y + main.cameraPos.y);
+			const x = (e.offsetX + main.camera.position.x);
+			const y = (e.offsetY + main.camera.position.y);
+			const mousePosition = new Vector2(x, y);
 
-			main.isMouseDown = true;
+			main.input.isMouseDown = true;
 
-			// Only proceed if the space bar isn't down
-			if (!main.isSpaceDown) {
+			const mode = main.modes.active;
 
-				// If Control key is down, we're erasing lines
-				// Else, we're adding lines
-				if (main.isCtrlDown) {
-					main.line.erase.line(x, y);
-				} else {
-					main.line.add(x, y);
+			if (!main.input.isSpaceDown) {
+
+				if (mode === 'collision') {
+					main.modes.collisions.action(mousePosition);
+				} else if (mode === 'entity') {
+					main.modes.entities.action(mousePosition);
 				}
 
 			}
+
 		},
-		onMouseUp: function () {
-			main.isMouseDown = false;
+		onMouseUp() {
+			main.input.isMouseDown = false;
 		},
-		onMouseMove: function (e) {
+		onMouseMove(e) {
 			const x = e.offsetX;
 			const y = e.offsetY;
-			const xPanned = x + main.cameraPos.x;
-			const yPanned = y + main.cameraPos.y;
+			const xPanned = x + main.camera.position.x;
+			const yPanned = y + main.camera.position.y;
+
+			main.input.currentMousePos = new Vector2(xPanned, yPanned);
 
 			// Update info with mouse coordinates (taking camera pannging into account)
-			$('#mouseX').text(xPanned);
-			$('#mouseY').text(yPanned);
+			$('#mouseX').text(main.input.currentMousePos.x);
+			$('#mouseY').text(main.input.currentMousePos.y);
+
+			if (main.modes.active === 'entity' && main.modes.entities.entityGuide) {
+				main.modes.entities.entityGuide.updatePos(new Vector2(main.input.currentMousePos.x, main.input.currentMousePos.y));
+				main.draw();
+			}
+
+			if (main.modes.active === 'collision' && main.modes.collisions.active === 'events' && main.modes.collisions.events.currentEvent) {
+				main.modes.collisions.events.updatecurrentEventSize();
+			}
 
 			// If space bar is pressed and left mouse button is being clicked, pan the canvas
 			// else if left mouse button is pressed, update lines
-			if (main.isSpaceDown && main.isMouseDown) {
-				main.fnCamera.pan(x, y, xPanned, yPanned);
+			if (main.input.isSpaceDown && main.input.isMouseDown) {
+				main.camera.pan(x, y, main.input.currentMousePos.x, main.input.currentMousePos.y);
 			}
 
 			// Set the current coordinates to our previous variable
-			main.previousMousePos = new Vector2(x, y);
+			main.input.previousMousePos = new Vector2(x, y);
 
 			// If we've started a line, update the end position so we can see it real-time
-			if (typeof main.input.currentLine !== 'undefined') {
-				main.line.showEnd(xPanned, yPanned);
+			if (typeof main.modes.collisions.lines.currentLine !== 'undefined') {
+				main.modes.collisions.lines.showEnd(main.input.currentMousePos.x, main.input.currentMousePos.y);
 			}
 		},
-		onKeyDown: function (e) {
+		onKeyDown(e) {
 			const key = e.key;
 
 			main.input.keys[key] = true;
 
-			// Undo the last line
-			if (main.input.keys['Control'] && main.input.keys['z']) {
-				main.line.erase.lastLine();
-				main.draw();
-			} else if (main.input.keys['Control']) {
-				main.isCtrlDown = true;
-				main.jCanvas.addClass('erase');
-			} else if (main.input.keys[' ']) {
-				main.isSpaceDown = true;
+			if (main.input.keys[' ']) {
+				// Pan camera on canvas
+				main.input.isSpaceDown = true;
 				main.jCanvas.addClass('move');
+			} else if (main.modes.active === 'collision' || main.modes.active === 'entity') {
+				if (main.input.keys['Control'] && main.input.keys['z']) {
+					// Undo the last line
+					main.modes.collisions.lines.erase.lastLine();
+					main.draw();
+				} else if (main.input.keys['Control']) {
+					// Erase line
+					main.input.isCtrlDown = true;
+					main.jCanvas.addClass('erase');
+				}
+			} if (main.input.keys['Shift']) {
+				main.input.isShiftDown = true;
 			}
 
 		},
-		onKeyUp: function (e) {
+		onKeyUp(e) {
 			const key = e.key;
 			main.input.keys[key] = false;
 
 			if (key === 'Control') {
-				main.isCtrlDown = false;
+				main.input.isCtrlDown = false;
 				main.jCanvas.removeClass('erase');
 			} else if (key === ' ') {
-				main.isSpaceDown = false;
+				main.input.isSpaceDown = false;
 				main.jCanvas.removeClass('move');
+			} else if (key === 'Shift') {
+				main.input.isShiftDown = false;
 			}
 
 		}
 	},
-	fnCamera: {
-		pan: function (x, y, xPanned, yPanned) {
+	camera: {
+		camera: undefined,
+		position: undefined,
+		init() {
+			main.camera.camera = new Camera();
+			main.camera.position = new Vector2(0, 0);
+			main.camera.camera.moveTo(main.camera.position.x, main.camera.position.y);
+		},
+		pan(x, y) {
 			// Get the difference between current mouse position and previous
-			const mouseXDiff = x - main.previousMousePos.x;
-			const mouseYDiff = y - main.previousMousePos.y;
+			const mouseXDiff = x - main.input.previousMousePos.x;
+			const mouseYDiff = y - main.input.previousMousePos.y;
 			// apply the difference to the camera position variable
-			main.cameraPos.x -= mouseXDiff;
-			main.cameraPos.y -= mouseYDiff;
+			main.camera.position.x -= mouseXDiff;
+			main.camera.position.y -= mouseYDiff;
 			
 			// Ensure camera panning doesn't go past world bounds
-			if (main.cameraPos.x <= 0)
-				main.cameraPos.x = 0;
-			else if ((main.cameraPos.x + main.CANVAS_WIDTH) > main.WORLD_WIDTH)
-				main.cameraPos.x = main.WORLD_WIDTH - main.CANVAS_WIDTH;
+			if (main.camera.position.x <= 0)
+				main.camera.position.x = 0;
+			else if ((main.camera.position.x + main.CANVAS_WIDTH) > main.WORLD_WIDTH)
+				main.camera.position.x = main.WORLD_WIDTH - main.CANVAS_WIDTH;
 
-			if (main.cameraPos.y <= 0)
-				main.cameraPos.y = 0;
-			else if ((main.cameraPos.y + main.CANVAS_HEIGHT) > main.WORLD_HEIGHT)
-				main.cameraPos.y = main.WORLD_HEIGHT - main.CANVAS_HEIGHT;
+			if (main.camera.position.y <= 0)
+				main.camera.position.y = 0;
+			else if ((main.camera.position.y + main.CANVAS_HEIGHT) > main.WORLD_HEIGHT)
+				main.camera.position.y = main.WORLD_HEIGHT - main.CANVAS_HEIGHT;
 
 			// update the camera (the Camera.moveTo function calls Camera.updateViewport where main.draw() is called)
-			main.camera.moveTo(main.cameraPos.x, main.cameraPos.y);
+			main.camera.camera.moveTo(main.camera.position.x, main.camera.position.y);
 		}
 	},
-	line: {
-		add: function (x, y) {
-			let coordDiff, startPos, endPos;
+	modes: {
+		active: 'properties',
+		init() {
+			// Initialize mode buttons
+			$('.viewBtn').on('click', main.modes.onBtnClick);
+			main.modes.reset();
+			main.modes.set('properties');
 
-			const lineType = $('.lineType.active').text();
-			const lineSound = $('#lineSound').val();
-
-			if (typeof main.input.currentLine === 'undefined') {
-				// Begin creating our new line
-				const lineNormal = $('#lineNormal').val();
-				const lineColor = (lineType === 'FLOOR') ? '#9F0313' : (lineType === 'CEILING' ? '#0E72D5' : '#02AA30');
-				coordDiff = 6;
-				// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
-				if (main.allowSnapping && typeof main.input.lastEndPos !== 'undefined') {
-					const dX = (main.input.lastEndPos.x - x);
-					const dY = (main.input.lastEndPos.y - y);
-					coordDiff = Math.sqrt(dX*dX + dY*dY);
-				}
-				// If the difference is less than specified, snap it.
-				if (coordDiff <= 5) {
-					startPos = new Vector2(main.input.lastEndPos.x, main.input.lastEndPos.y);
-				} else {
-					startPos = new Vector2(x, y);
-				}
-
-				main.input.currentLine = new Line(startPos, new Vector2(x, y), lineColor, lineType, lineNormal, lineSound);
-			} else {
-				// Our walls need to be completely vertical.
-				if (lineType === 'WALL') {
-					endPos = new Vector2(main.input.currentLine.startPos.x, y);
-				} else {
-					endPos = new Vector2(x, y);
-				}
-
-				// We need to make sure the lines are going in the proper direction.
-				// If the start position (x,y) is greater than the end position, switch them
-				if (main.input.currentLine.startPos.x > endPos.x || (lineType === 'WALL' && main.input.currentLine.startPos.y > endPos.y)) {
-					main.input.currentLine.endPos = main.input.currentLine.startPos;
-					main.input.currentLine.startPos = endPos;
-				} else {
-					main.input.currentLine.endPos = endPos;
-				}
-
-				// Based on the line's start position, calculate what region it's in
-				const regionX = Math.floor(main.input.currentLine.startPos.x / main.gridSize); 
-				const regionY = Math.floor(main.input.currentLine.startPos.y / main.gridSize)
-				const region = new Vector2(regionX, regionY);
-				main.input.currentLine.region = region;
-
-				// Calculate our line's slope and y-Intercept
-				if (lineType !== 'WALL') {
-					const slope = (main.input.currentLine.endPos.y - main.input.currentLine.startPos.y) / (main.input.currentLine.endPos.x - main.input.currentLine.startPos.x);
-					const yIntercept = main.input.currentLine.startPos.y - (slope * main.input.currentLine.startPos.x);
-					main.input.currentLine.slope = slope;
-					main.input.currentLine.yIntercept = yIntercept;
-				}
-
-				// Push our new line to the lines array, then reset our currentLine variable
-				main.lines.push(main.input.currentLine);
-				main.input.currentLine = undefined;
-				main.input.lastEndPos = endPos;
-				main.draw();
-			}
-
-			// UPDATE INFO
-			$('#lastPointX').text(x);
-			$('#lastPointY').text(y);
+			// Initialize each mode
+			main.modes.properties.init();
+			main.modes.entities.init();
+			main.modes.collisions.init();
+			main.modes.backgrounds.init();
 		},
-		showEnd: function (xPanned, yPanned) {
-			if (main.input.currentLine.collision === 'WALL') xPanned = main.input.currentLine.startPos.x;	// Walls can only be perfectly vertical
-			main.input.currentLine.endPos = new Vector2(xPanned, yPanned);
-			main.draw();
-		},
-		erase: {
-			line: function (x, y) {
-				let bounds, eraseLine;
-
-				bounds = new Rectangle(x-5, y-5, 10, 10);	// give a 10 pixel buffer and offset it so the click point is the center
-				eraseLine = false;
-
-				// Loop through lines and figure out whether or not we're intersecting
-				for (let l = 0; l < main.lines.length; l++) {
-
-					const line = main.lines[l];
-
-					if ((line.collision == 'FLOOR' || line.collision == 'CEILING') && bounds.center.x >= line.startPos.x && bounds.center.x <= line.endPos.x) {
-
-						const slope = (line.endPos.y - line.startPos.y) / (line.endPos.x - line.startPos.x);
-						const b = line.startPos.y - (slope * line.startPos.x);
-						const yc = (slope * bounds.center.x) + b;
-
-						if (Math.abs(yc - bounds.center.y) <= bounds.halfSize.y) {
-							eraseLine = true;
-						}
-
-					} else if (line.collision == 'WALL' && bounds.center.y > line.startPos.y && bounds.center.y < line.endPos.y) {
-
-						const xDiff = Math.abs(bounds.center.x - line.startPos.x);
-
-						if (xDiff <= bounds.halfSize.x) {
-							eraseLine = true;
-						}
-
-					}
-
-					// If we clicked on a line, remove it from the array and re-draw
-					if (eraseLine) {
-						main.lines.splice(l, 1);
-						main.draw();
-						break; // no sense in continuing loop
-					}
-
-				}
-
-			},
-			lastLine: function () {
-				// If we've just completed a line, delete the last node of the main lines array. Else, cancel the current line in progress.
-				if (typeof main.input.currentLine === 'undefined' && main.lines.length > 0) {
-					main.lines.pop();
-				} else {
-					main.input.currentLine = undefined;
-				}
-			}
-		}
-	},
-	toolBox: {
 		properties: {
-			onChange: function () {
+			showBackground: true,
+			showGrid: false,
+			allowSnapping: true,
+			showLines: true,
+			showEntities: true,
+			showEvents: true,
+			init() {
+				$('#propertiesSection .checkboxes').on('change', main.modes.properties.onChange);
+				const introText = $('#introText');
+				introText.on('focus', main.modes.properties.onIntroTextFocus);
+				introText
+					.on('blur', main.modes.properties.onIntroTextBlur)
+					.trigger('blur');
+			},
+			onChange() {
 				const that = $(this);
 				const val = that.val();
 				const isChecked = (that.is(':checked'));
 
-				if (val === 'background') {
-					main.showBackground = isChecked;
-				} else if (val === 'grid') {
-					main.showGrid = isChecked;
-				} else if (val === 'snap') {
-					main.allowSnapping = isChecked;
-				} else if (val === 'lines') {
-					main.showLines = isChecked;
+				main.modes.properties[`show${val}`] = isChecked;
+
+				main.draw();
+			},
+			onIntroTextFocus() {
+				const introTextEl = $(this);
+				const val = introTextEl.val().replace('\n\n', '').trim();
+
+				if (val === 'INTRO TEXT') {
+					introTextEl.val('');
+					introTextEl.css({ color: '#222222', 'text-align': 'left' } );
+				}
+			},
+			onIntroTextBlur() {
+				const introTextEl = $(this);
+				const val = introTextEl.val();
+
+				if (val.length === 0) {
+					introTextEl.val('\n\nINTRO TEXT');
+					introTextEl.css({ color: '#BBBBBB', 'text-align': 'center' } );
+				}
+			}
+		},
+		entities: {
+			entityGuide: undefined,
+			player: undefined,
+			npc: [],
+			init() {
+				$('#entityType').on('change', main.modes.entities.onGuideChange);
+				$('.entitySize')
+					.on('blur', main.modes.entities.onGuideChange)
+					.trigger('blur');
+			},
+			onGuideChange() {
+				const width = $('#entityWidth').val();
+				const height = $('#entityHeight').val();
+				const entitySize = new Vector2(width, height);
+				const entityType = $('#entityType').val();
+				const entityColor = (entityType === 'player') ? '#FFFFFF' : '#0088FF';
+				const entityFilleColor = `${entityColor}66`
+				const entity = main.modes.entities.entityGuide;
+
+				if (!entity) {
+					main.modes.entities.entityGuide = new Texture(new Vector2(0, 0), entitySize, entityFilleColor, 1, entityColor);
+				}
+
+				main.modes.entities.entityGuide = new Texture(new Vector2(0, 0), entitySize, entityFilleColor, 1, entityColor);
+				main.modes.entities.entityGuide.updateColor(entityFilleColor, entityColor);
+				main.modes.entities.entityGuide.updateSize(entitySize);
+			},
+			action(mousePos) {
+				if (main.input.isCtrlDown) {
+					main.modes.entities.erase(mousePos);
+				} else {
+					main.modes.entities.add(mousePos);
+				}
+			},
+			add(mousePos) {
+				const entityType = $('#entityType').val();
+				const width = $('#entityWidth').val();
+				const height = $('#entityHeight').val();
+
+				if (entityType === 'player') {
+
+					main.modes.entities.player = undefined;
+
+					main.modes.entities.player = new Player(
+						new Vector2(mousePos.x, mousePos.y),
+						new Vector2(width, height),
+						'#FFFFFF66',
+						1,
+						'#FFFFFF'
+					);
+
+				} else if (entityType === 'npc') {
+
+					main.modes.entities.npc.push(
+						new NPC(
+							new Vector2(mousePos.x, mousePos.y),
+							new Vector2(width, height),
+							'#0088FF66',
+							1,
+							'#0088FF'
+						)
+					);
+
 				}
 
 				main.draw();
+			},
+			erase(mousePos) {
+				// Create rect from mouse point. The mouse position is the center point
+				const pointerRect = new Rectangle(mousePos.x - 2, mousePos.y - 2, 4, 4);
 
-			}
-		},
-		collision: {
-			onLineTypeChange: function () {
-				const that = $(this);
-				const val = that.text();
-				const lineNormal = $('#lineNormal');
-				const lineSound = $('#lineSound');
+				const player = main.modes.entities.player;
+				
+				// Erase player
+				if (player) {
+					const playerRect = new Rectangle(player.pos.x, player.pos.y, player.size.x, player.size.y);
 
-				$('#collision .lineType.active').removeClass('active');
-				that.addClass('active');
-
-				if (val === 'WALL') {
-					lineNormal.attr({'readonly': false, 'disabled': false});
-					lineNormal.val(1);
-					lineSound.attr({'readonly': true, 'disabled': true});
-					lineSound.val('');
-				} else {
-
-					if (val === 'FLOOR') {
-						lineNormal.attr({'readonly': true, 'disabled': true});
-						lineNormal.val(-1);
-						lineSound.attr({'readonly': false, 'disabled': false});
-						lineSound.val('WOOD');
-					} else if (val === 'CEILING') {
-						lineNormal.attr({'readonly': true, 'disabled': true});
-						lineNormal.val(1);
-						lineSound.attr({'readonly': true, 'disabled': true});
-						lineSound.val('');
+					// If the pointer is intersecting with the player, remove it
+					if (main.modes.checkRectIntersect(pointerRect, playerRect)) {
+						main.modes.entities.player = undefined;
 					}
 
 				}
+
+				// Erase NPC
+				for (let i = 0; i < main.modes.entities.npc.length; i++) {
+
+					const npc = main.modes.entities.npc[i];
+					const npcRect = new Rectangle(npc.pos.x, npc.pos.y, npc.size.x, npc.size.y);
+
+					// If the pointer is intersecting with an NPC, remove it
+					if (main.modes.checkRectIntersect(pointerRect, npcRect)) {
+						main.modes.entities.npc.splice(i, 1);
+						break;
+					}
+
+				}
+
+				main.draw();
 			}
 		},
-		dialog: {
-			show: function (data) {
-				const title = (typeof data.title === 'undefined') ? 'DIALOG' : data.title;
-				const content = (typeof data.content === 'undefined') ? '' : data.content;
-				const showSave = (typeof data.showSave === 'undefined') ? false : data.showSave;
-				const mainColor = (title === 'LOAD') ? '#C68A0D' : (title === 'EXPORT' ? '#11BE41' : '#F11B2B');
+		collisions: {
+			active: 'lines',
+			init() {
+				$('.collisionType').on('click', main.modes.collisions.onBtnClick);
+				$('#eventType')
+					.on('change', main.modes.collisions.events.onTypeChange)
+					.trigger('change');
+				main.modes.collisions.reset();
+				main.modes.collisions.set('lines');
+				main.modes.collisions.lines.init();
+			},
+			action(mousePosition) {
+				const collisionType = main.modes.collisions.active;
 
+				if (collisionType === 'lines') {
+					// If Control key is down, we're erasing lines
+					// Else, we're adding lines
+					if (main.input.isCtrlDown) {
+						main.modes.collisions.lines.erase.line(mousePosition);
+					} else {
+						main.modes.collisions.lines.add(mousePosition);
+					}
+				} else if (collisionType === 'events') {
+					main.modes.collisions.events.action(mousePosition);
+				}
+			},
+			lines: {
+				currentLine: undefined,
+				lastEndPos: undefined,
+				lineArr: [],
+				linesColors: {
+					FLOOR: '#9F0313',
+					WALL: '#02AA30',
+					CEILING: '#0E72D5',
+				},
+				init() {
+					$('#lineType')
+						.on('change', main.modes.collisions.lines.onTypeChange)
+						.trigger('change');
+					$('#lineNormal')
+						.on('change', main.modes.collisions.lines.onLineNormalChange)
+						.trigger('change');
+				},
+				onTypeChange() {
+					const that = $(this);
+					const val = that.val();
+					const lineNormal = $('#lineNormal');
+					const lineSound = $('#lineSound');
+
+					if (val === 'WALL') {
+						lineNormal.attr({'readonly': false, 'disabled': false});
+						lineNormal.val(1);
+						lineSound.attr({'readonly': true, 'disabled': true});
+						lineSound.val('');
+					} else {
+
+						if (val === 'FLOOR') {
+							lineNormal.attr({'readonly': true, 'disabled': true});
+							lineNormal.val(-1);
+							lineSound.attr({'readonly': false, 'disabled': false});
+							lineSound.val('WOOD');
+						} else if (val === 'CEILING') {
+							lineNormal.attr({'readonly': true, 'disabled': true});
+							lineNormal.val(1);
+							lineSound.attr({'readonly': true, 'disabled': true});
+							lineSound.val('');
+						}
+
+					}
+
+					lineNormal.trigger('change');
+				},
+				onLineNormalChange() {
+					const lineNormalEl = $(this);
+					const lineNormalVal = +lineNormalEl.val();
+					const lineNormalIcon = $('#normalIcon');
+
+					if (lineNormalVal === -1) {
+						lineNormalIcon.css({ 'background-image': 'url("./images/icons/normal-bottomright.png")' });
+					} else {
+						lineNormalIcon.css({ 'background-image': 'url("./images/icons/normal-topleft.png")' });
+					}
+				},
+				add(mousePosition) {
+					const lineType = $('#lineType').val();
+					const lineSound = $('#lineSound').val();
+					const lineNormal = $('#lineNormal').val();
+					const lineColor = main.modes.collisions.lines.linesColors[lineType];
+					let coordDiff, startPos, endPos;
+
+					if (typeof main.modes.collisions.lines.currentLine === 'undefined') {
+						// Begin creating our new line
+						coordDiff = 6;
+						// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
+						if (main.modes.properties.allowSnapping && typeof main.modes.collisions.lines.lastEndPos !== 'undefined') {
+							const dX = (main.modes.collisions.lines.lastEndPos.x - mousePosition.x);
+							const dY = (main.modes.collisions.lines.lastEndPos.y - mousePosition.y);
+							coordDiff = Math.sqrt(dX*dX + dY*dY);
+						}
+						// If the difference is less than specified, snap it.
+						if (coordDiff <= 5) {
+							startPos = new Vector2(main.modes.collisions.lines.lastEndPos.x, main.modes.collisions.lines.lastEndPos.y);
+						} else {
+							startPos = new Vector2(mousePosition.x, mousePosition.y);
+						}
+
+						main.modes.collisions.lines.currentLine = new Line(startPos, new Vector2(mousePosition.x, mousePosition.y), lineColor, lineType, lineNormal, lineSound);
+					} else {
+
+						endPos = new Vector2(mousePosition.x, mousePosition.y);
+
+						// Our walls need to be completely vertical.
+						if (lineType === 'WALL') {
+
+							endPos.x = main.modes.collisions.lines.currentLine.startPos.x;
+
+						} else if (main.input.isShiftDown) {
+
+							// Make the line perfectly level (on the x axis)
+							endPos.y = main.modes.collisions.lines.currentLine.startPos.y;
+
+						}					
+
+						// We need to make sure the lines are going in the proper direction.
+						// If the start position (x,y) is greater than the end position, switch them
+						if (main.modes.collisions.lines.currentLine.startPos.x > endPos.x || (lineType === 'WALL' && main.modes.collisions.lines.currentLine.startPos.y > endPos.y)) {
+							main.modes.collisions.lines.currentLine.endPos = main.modes.collisions.lines.currentLine.startPos;
+							main.modes.collisions.lines.currentLine.startPos = endPos;
+						} else {
+							main.modes.collisions.lines.currentLine.endPos = endPos;
+						}
+
+						// Based on the line's start position, calculate what region it's in
+						// const regionX = Math.floor(main.modes.collisions.lines.currentLine.startPos.x / main.gridSize); 
+						// const regionY = Math.floor(main.modes.collisions.lines.currentLine.startPos.y / main.gridSize)
+						// const region = new Vector2(regionX, regionY);
+						// main.modes.collisions.lines.currentLine.region = region;
+
+						// Calculate our line's slope and y-Intercept
+						if (lineType !== 'WALL') {
+							const slope = (main.modes.collisions.lines.currentLine.endPos.y - main.modes.collisions.lines.currentLine.startPos.y) / (main.modes.collisions.lines.currentLine.endPos.x - main.modes.collisions.lines.currentLine.startPos.x);
+							const yIntercept = main.modes.collisions.lines.currentLine.startPos.y - (slope * main.modes.collisions.lines.currentLine.startPos.x);
+							main.modes.collisions.lines.currentLine.slope = slope;
+							main.modes.collisions.lines.currentLine.yIntercept = yIntercept;
+						}
+
+						// Push our new line to the lines array, then reset our currentLine variable
+						main.modes.collisions.lines.lineArr.push(main.modes.collisions.lines.currentLine);
+						main.modes.collisions.lines.currentLine = undefined;
+						main.modes.collisions.lines.lastEndPos = endPos;
+						main.draw();
+					}
+
+					// UPDATE INFO
+					$('#lastPointX').text(mousePosition.x);
+					$('#lastPointY').text(mousePosition.y);
+				},
+				showEnd(xPanned, yPanned) {
+					if (main.modes.collisions.lines.currentLine.collision === 'WALL') {
+						// Walls can only be perfectly vertical
+						xPanned = main.modes.collisions.lines.currentLine.startPos.x;
+					} else if (main.input.isShiftDown) {
+						// Floors and Ceiling can be perfect horizontal if shift is pressed
+						yPanned = main.modes.collisions.lines.currentLine.startPos.y;
+					}
+					main.modes.collisions.lines.currentLine.endPos = new Vector2(xPanned, yPanned);
+					main.draw();
+				},
+				erase: {
+					line(mousePosition) {
+						const lines = main.modes.collisions.lines.lineArr;
+						const bounds = new Rectangle(mousePosition.x-5, mousePosition.y-5, 10, 10);	// give a 10 pixel buffer and offset it so the click point is the center
+						let eraseLine = false;
+
+						// Loop through lines and figure out whether or not we're intersecting
+						for (let l = 0; l < lines.length; l++) {
+
+							const line = lines[l];
+
+							if ((line.collision == 'FLOOR' || line.collision == 'CEILING') && bounds.center.x >= line.startPos.x && bounds.center.x <= line.endPos.x) {
+
+								const slope = (line.endPos.y - line.startPos.y) / (line.endPos.x - line.startPos.x);
+								const b = line.startPos.y - (slope * line.startPos.x);
+								const yc = (slope * bounds.center.x) + b;
+
+								if (Math.abs(yc - bounds.center.y) <= bounds.halfSize.y) {
+									eraseLine = true;
+								}
+
+							} else if (line.collision == 'WALL' && bounds.center.y > line.startPos.y && bounds.center.y < line.endPos.y) {
+
+								const xDiff = Math.abs(bounds.center.x - line.startPos.x);
+
+								if (xDiff <= bounds.halfSize.x) {
+									eraseLine = true;
+								}
+
+							}
+
+							// If we clicked on a line, remove it from the array and re-draw
+							if (eraseLine) {
+								lines.splice(l, 1);
+								main.draw();
+								break; // no sense in continuing loop
+							}
+
+						}
+					},
+					lastLine() {
+						// If we've just completed a line, delete the last node of the main lines array. Else, cancel the current line in progress.
+						if (typeof main.modes.collisions.lines.currentLine === 'undefined' && main.modes.collisions.lines.lineArr.length > 0) {
+							main.modes.collisions.lines.lineArr.pop();
+						} else {
+							main.modes.collisions.lines.currentLine = undefined;
+						}
+					}
+				}
+			},
+			events: {
+				currentEvent: undefined,
+				eventArr: [],
+				eventColor: {
+					EXIT: '#FF8800',
+					PITFALLS: '#88FF00',
+					GENERIC: '#E76960',
+				},
+				exit: undefined,
+				action(mousePos) {
+					if (main.input.isCtrlDown) {
+						main.modes.collisions.events.erase(mousePos);
+					} else {
+						main.modes.collisions.events.add(mousePos);
+					}
+				},
+				add(mousePos) {
+					const eventType = $('#eventType').val();
+					
+					if (!main.modes.collisions.events.currentEvent) {
+
+						const eventName = $('#eventName').val();
+						const eventTexture = new Texture(
+							new Vector2(mousePos.x, mousePos.y),
+							new Vector2(0, 0),
+							`${main.modes.collisions.events.eventColor[eventType]}66`,
+							1,
+							main.modes.collisions.events.eventColor[eventType]
+						);
+
+						// Start a new collision event
+						main.modes.collisions.events.currentEvent = new CollisionEvent(
+							eventType,
+							eventName,
+							eventTexture
+						);
+
+					} else {
+
+						const currentSize = new Vector2(
+							main.modes.collisions.events.currentEvent.texture.size.x,
+							main.modes.collisions.events.currentEvent.texture.size.y
+						);
+						const currentPos = new Vector2(
+							main.modes.collisions.events.currentEvent.texture.pos.x,
+							main.modes.collisions.events.currentEvent.texture.pos.y
+						);
+						const newSize = new Vector2(Math.abs(currentSize.x), Math.abs(currentSize.y));
+						let newPos = currentPos;
+
+						// Check to see if the x or y for the size is a negative number. If so, fix it by reversing the pos/size
+						// Shape will be the same but the size will no longer be negative.
+
+						// Pos is Upper right
+						if (currentSize.x < 0 && currentSize.y > 0) {
+							newPos = new Vector2(
+								currentPos.x - newSize.x,
+								currentPos.y
+							);
+						}
+
+						// Pos is bottom left
+						if (currentSize.x > 0 && currentSize.y < 0) {
+							newPos = new Vector2(
+								currentPos.x,
+								currentPos.y - newSize.y
+							);
+						}
+
+						// Pos is bottom right
+						if (currentSize.x < 0 && currentSize.y < 0) {
+							newPos = new Vector2(
+								currentPos.x - newSize.x,
+								currentPos.y - newSize.y
+							);
+						}
+						
+						main.modes.collisions.events.currentEvent.updatePos(newPos);
+						main.modes.collisions.events.currentEvent.updateSize(newSize);
+
+						// Only finish the event if the rectangle size is big enough
+						if (Math.floor(newSize.x) > 0 && Math.floor(newSize.y) > 0) {
+
+							// Finish our Collision Event
+							if (eventType === 'EXIT') {
+								main.modes.collisions.events.exit = main.modes.collisions.events.currentEvent;
+							} else {
+								main.modes.collisions.events.eventArr.push(main.modes.collisions.events.currentEvent);
+							}
+						}
+						// Clear currentEvent for the next one
+						main.modes.collisions.events.currentEvent = undefined;
+
+					}
+
+					main.draw();
+
+				},
+				erase(mousePos) {
+					// Create rect from mouse point. The mouse position is the center point
+					const pointerRect = new Rectangle(mousePos.x - 2, mousePos.y - 2, 4, 4);
+
+					const exit = main.modes.collisions.events.exit;
+					
+					// Erase exit
+					if (exit) {
+						const exitRect = new Rectangle(exit.getPos().x, exit.getPos().y, exit.getSize().x, exit.getSize().y);
+
+						// If the pointer is intersecting with the exit, remove it
+						if (main.modes.checkRectIntersect(pointerRect, exitRect)) {
+							main.modes.collisions.events.exit = undefined;
+						}
+
+					}
+
+					// Erase Pitfalls or Generic
+					for (let i = 0; i < main.modes.collisions.events.eventArr.length; i++) {
+
+						const event = main.modes.collisions.events.eventArr[i];
+						const eventRect = new Rectangle(event.getPos().x, event.getPos().y, event.getSize().x, event.getSize().y);
+
+						// If the pointer is intersecting with an event, remove it
+						if (main.modes.checkRectIntersect(pointerRect, eventRect)) {
+							main.modes.collisions.events.eventArr.splice(i, 1);
+							break;
+						}
+
+					}
+
+					main.draw();
+				},
+				updatecurrentEventSize() {
+					const startPos = main.modes.collisions.events.currentEvent.texture.pos;
+					const size = new Vector2(
+						main.input.currentMousePos.x - startPos.x,
+						main.input.currentMousePos.y - startPos.y
+					);
+
+					main.modes.collisions.events.currentEvent.updateSize(new Vector2(size.x, size.y));
+
+					main.draw();
+				},
+				onTypeChange() {
+					const typeEl = $(this);
+					const defaultName = typeEl.find('option:selected').data('defaultname');
+					const nameEl = $('#eventName');
+
+					nameEl
+						.val('')
+						.attr(
+							{
+								disabled: false,
+								readonly: false
+							}
+						);
+
+					// Set default name
+					if (defaultName) {
+						nameEl
+							.val(defaultName)
+							.attr(
+								{
+									disabled: true,
+									readonly: true
+								}
+							);
+					}
+				}
+			},
+			onBtnClick() {
+				const thisType = $(this);
+				const type = thisType.attr('id');
+				const isTypeAlreadyActive = thisType.hasClass('active');
+				if (!isTypeAlreadyActive) {
+					main.modes.collisions.reset();
+					main.modes.collisions.set(type);
+				}
+			},
+			set(type) {
+				// Set new type
+				main.modes.collisions.active = type;
+				$(`#${type}`).addClass('active');
+
+				// Show Section
+				$(`#${type}Section`).slideDown();
+			},
+			reset() {
+				// Reset all btns
+				const collisionTypes = $('.collisionType');
+				for (let i = 0; i <= collisionTypes.length; i++) {
+					const jCT = $(collisionTypes[i]);
+					const collisionSectionID = jCT.attr('id') + 'Section';
+
+					// Deactivate
+					jCT.removeClass('active');
+
+					// Hide section
+					$(`#${collisionSectionID}`).slideUp();
+				}
+			}
+		},
+		backgrounds: {
+			active: undefined,
+			sprites: [],
+			imageOptions: [
+				{ filename: '7680x720-Charcoal-Background.jpg', width: 7680, height: 720, },
+				{ filename: 'Blank-2560x1440.jpg', width: 2560, height: 1440, },
+				{ filename: 'LEVEL_1.png', width: 1024, height: 590, },
+				{ filename: 'LEVEL_3.jpg', width: 839, height: 393, },
+				{ filename: 'LEVEL_4.jpg', width: 1920, height: 1080, },
+				{ filename: 'LEVEL_4_Sized.jpg', width: 1280, height: 720, },
+				{ filename: 'LEVEL_5.jpg', width: 1200, height: 675, },
+				{ filename: 'LEVEL_6.jpg', width: 1280, height: 720, },
+				{ filename: 'BG0.png', width: 8064, height: 648, },
+				{ filename: 'BG1.png', width: 8064, height: 648, },
+				{ filename: 'BG2.png', width: 8064, height: 648, },
+				{ filename: 'BG3.png', width: 8064, height: 648, },
+				{ filename: 'BG4.png', width: 8064, height: 648, },
+				{ filename: 'Background_1.png', width: 3000, height: 1143, },
+				{ filename: 'Background_2.png', width: 3000, height: 1143, },
+				{ filename: 'Background_3.png', width: 3000, height: 1143, },
+				{ filename: 'Background_4.png', width: 1280, height: 1143, },
+				{ filename: 'moon.png', width: 900, height: 900, },
+			],
+			imageSelectOpeners: [
+				'Pick something... quickly',
+				'Choose wisely',
+				'Here we go again...',
+				'Haven\'t you had enough?',
+				'[REDACTED]',
+				'Is this one a repeat?',
+				'Now is it a repeat?'
+			],
+			init() {
+				$('.backgroundModeBtn').on('click', main.modes.backgrounds.onModeChange);
+				$('#backgroundImg0').on('change', main.modes.backgrounds.onBackgroundChange);
+				$('.addLayer').on('click', main.modes.backgrounds.onAddLayer);
+				$('#backgroundApplyBtn').on('click', main.modes.backgrounds.onBackgroundSizeChange);
+				main.modes.backgrounds.reset();
+				main.modes.backgrounds.set('backgroundSize');
+				main.modes.backgrounds.loadBGs(0);
+				main.modes.backgrounds.setBackgroundSize(
+					new Vector2(2560, 1440),
+					new Vector2(1280, 720)
+				);
+			},
+			onModeChange() {
+				const thisType = $(this);
+				const type = thisType.attr('id');
+				const isTypeAlreadyActive = thisType.hasClass('active');
+				if (!isTypeAlreadyActive) {
+					main.modes.backgrounds.reset();
+					main.modes.backgrounds.set(type);
+				}
+			},
+			set(type) {
+				// Set new type
+				main.modes.backgrounds.active = type;
+				$(`#${type}`).addClass('active');
+
+				// Show Section
+				$(`#${type}Section`).slideDown();
+			},
+			reset() {
+				// Reset all btns
+				const backgroundModes = $('.backgroundModeBtn');
+				for (let i = 0; i <= backgroundModes.length; i++) {
+					const jBM = $(backgroundModes[i]);
+					const backgroundSectionID = jBM.attr('id') + 'Section';
+
+					// Deactivate
+					jBM.removeClass('active');
+
+					// Hide section
+					$(`#${backgroundSectionID}`).slideUp();
+				}
+			},
+			loadBGs(index) {
+				const imgSelect = $(`#backgroundImg${index}`);
+				const images = main.modes.backgrounds.imageOptions;
+
+				// Populate select box with images
+				for (const image of images) {
+					const imageName = image.filename.split('.')[0];
+					imgSelect.append(`
+						<option
+							data-width="${image.width}"
+							data-height="${image.height}"
+							value="${image.filename}"
+						>${imageName}</option>
+					`);
+				}
+
+				// trigger a change event
+				imgSelect.trigger('change');
+			},
+			onBackgroundChange() {
+				const thisImageEl = $(this);
+				const selected = thisImageEl.find('option:selected');
+				const selectedVal = selected.val();
+
+				if (+selectedVal === -1) {
+					return;
+				}
+
+				const selectedWidth = selected.data('width');
+				const selectedHeight = selected.data('height');
+				const imagePath = `images/${selectedVal}`;
+				const toolWidthField = $('#backgroundWidth');
+				const toolHeightField = $('#backgroundHeight');
+
+				// Find the index we're changing
+				const selectIndex = +thisImageEl.data('index');
+				const parralaxScroll = (selectIndex * 0.18).toFixed(1);
+
+				// If that index already exists, then we're updating. Otherwise we're creating new
+				if (main.modes.backgrounds.sprites[selectIndex]) {
+					main.modes.backgrounds.sprites[selectIndex].SetImage(imagePath);
+				} else {
+					main.modes.backgrounds.sprites.push(
+						new Background(
+							imagePath,
+							new Vector2(0, 0),
+							new Vector2(selectedWidth, selectedHeight),
+							parralaxScroll
+						)
+					);
+				}
+
+				/*
+				main.modes.resetCanvas(0);
+
+				// Only resize the canvas on the first image
+				if (selectIndex === 0) {
+					main.modes.backgrounds.setBackgroundSize(selectedWidth, selectedHeight);
+					toolWidthField.val(selectedWidth);
+					toolHeightField.val(selectedHeight);
+				}
+				*/
+
+				main.modes.properties.showBackground = true;
+
+				thisImageEl.trigger('blur');
+
+				setTimeout(() => main.draw(), 2000);
+			},
+			onBackgroundSizeChange() {
+				const worldWidthEl = $('#worldWidth');
+				const worldHeightEl = $('#worldHeight');
+				const viewportWidthEl = $('#viewportWidth');
+				const viewportHeightEl = $('#viewportHeight');
+				const worldWidthVal = worldWidthEl.val();
+				const worldHeightVal = worldHeightEl.val();
+				const viewportWidthVal = viewportWidthEl.val();
+				const viewportHeightVal = viewportHeightEl.val();
+
+				main.modes.backgrounds.setBackgroundSize(
+					new Vector2(worldWidthVal, worldHeightVal),
+					new Vector2(viewportWidthVal, viewportHeightVal)
+				);
+
+				setTimeout(() => main.draw(), 2000);
+
+			},
+			onAddLayer() {
+				const bgImageDiv = $('#backgroundLayers');
+				const currentImageSelects = $('.backgroundImg');
+				const lastSelect = $(currentImageSelects[currentImageSelects.length - 1]).data('index');
+				const selectIndex = +lastSelect + 1;
+				const imageSelectOpeners = main.modes.backgrounds.imageSelectOpeners;
+				const randomOpener = imageSelectOpeners[random(0, imageSelectOpeners.length - 1)];
+				const newImageSelect = `
+					<div class="row">
+						<label for="backgroundImg${selectIndex}">${selectIndex}:</label>
+						<select id="backgroundImg${selectIndex}" data-index="${selectIndex}" class="backgroundImg">
+							<option value="-1">${randomOpener}</option>
+						</select>
+						<div class="backgroundPropertiesBtn">&nbsp;</div>
+					</div>
+				`;
+				
+				bgImageDiv.append(newImageSelect);
+				main.modes.backgrounds.loadBGs(selectIndex);
+
+				const newSelectEl = $(`#backgroundImg${selectIndex}`);
+				newSelectEl.on('change', main.modes.backgrounds.onBackgroundChange);
+
+			},
+			setBackgroundSize(worldSize, viewportSize) {
+				// Reset global dimensions
+				main.WORLD_WIDTH = +worldSize.x;
+				main.WORLD_HEIGHT = +worldSize.y;
+				main.CANVAS_WIDTH = +viewportSize.x;
+				main.CANVAS_HEIGHT = +viewportSize.y;
+
+				// Apply Dimensions
+				main.canvas.width = main.CANVAS_WIDTH;
+				main.canvas.height = main.CANVAS_HEIGHT;
+
+				// Update info sectoin
+				$('#viewportSize').text(`${viewportSize.x}x, ${viewportSize.y}y`);
+				$('#worldSize').text(`${worldSize.x}x, ${worldSize.y}y`);
+
+				// Update camera
+				main.camera.camera.updateViewport();
+			},
+			parralaxScroll() {
+				
+			}
+		},
+		checkRectIntersect(rect1, rect2) {
+
+			const intersectionDepth = rect1.GetIntersectionDepth(rect2);
+			const absDepthX = Math.abs(intersectionDepth.x);
+			const absDepthY = Math.abs(intersectionDepth.y);
+
+			return (absDepthY < absDepthX || absDepthX < absDepthY);
+
+		},
+		onBtnClick() {
+			const thisMode = $(this);
+			const mode = thisMode.attr('id');
+			const isModeAlreadyActive = thisMode.hasClass('active');
+			if (!isModeAlreadyActive) {
+				main.modes.reset();
+				main.modes.set(mode);
+				main.draw();
+			}
+		},
+		set(mode) {
+
+			// SET NEW MODE			
+			main.modes.active = mode;
+			$(`#${mode}`).addClass('active').show();
+
+			// SHOW SECTION
+			$(`#${mode}Section`).slideDown();
+
+		},
+		reset() {
+			// RESET ALL BTNS
+			const viewBtns = $('.viewBtn');
+			for (let i = 0; i <= viewBtns.length; i++) {
+				const jViewBtn = $(viewBtns[i]);
+				const sectionID = jViewBtn.attr('id') + 'Section';
+				
+				// Deactivate
+				jViewBtn.removeClass('active');
+
+				// Hide Section
+				$(`#${sectionID}`).slideUp();
+			};
+		},
+		resetCanvas(shouldResetBackgrounds = 1) {
+			main.modes.collisions.lines.lineArr = [];
+			main.modes.collisions.currentLine = undefined;
+			main.modes.collisions.events.eventArr = [];
+			main.modes.entities.player = undefined;
+			main.modes.entities.npc = [];
+			main.modes.collisions.events.exit = undefined;
+			main.modes.collisions.events.eventArr = [];
+
+			if (shouldResetBackgrounds) {
+				main.modes.backgrounds.sprites = [];
+			}
+
+			main.draw();
+		},
+	},
+	toggleToolBox() {
+		const toolBox = $('#toolBox');
+		const toolBoxHideArrow = $('#toolBoxHideBar #arrow');
+		
+		toolBox.toggle();
+
+		if (this.isToolBoxShowing) {
+			this.isToolBoxShowing = false;
+			toolBoxHideArrow.text('<');
+		} else {
+			this.isToolBoxShowing = true;
+			toolBoxHideArrow.text('>');
+		}
+	},
+	finalization: {
+		init() {
+			// Event Handlers
+			$('#loadBtn').on('click', main.finalization.load.show);
+			$('#exportBtn').on('click', main.finalization.export.output);
+			$('#resetBtn').on('click', main.finalization.reset);
+			$('#toolBoxHideBar').on('click', main.toggleToolBox);
+			$('#dialogSaveBtn').on('click', main.finalization.load.save);
+			$('#dialogCloseBtn').on('click', main.finalization.dialog.close);
+			main.finalization.export.init();
+		},
+		load: {
+			show() {
+				main.finalization.dialog.show(
+					{
+						title: 'LOAD',
+						showSave: true,
+					}
+				);
+			},
+			save() {
+				const content = $('#dialogTextarea');
+				const val = content.val();
+
+				// If there's no content, abort
+				if (val.length === 0) {
+					return;
+				}
+
+				const input = JSON.parse(val);
+
+				// World & Canvas Dimensions
+				main.modes.backgrounds.setBackgroundSize(
+					new Vector2(input.worldWidth, input.worldHeight),
+					new Vector2(main.CANVAS_WIDTH, main.CANVAS_HEIGHT)	// Keep as is - we don't send viewport size with level info
+				);
+				$('#worldWidth').val(input.worldWidth);
+				$('#worldHeight').val(input.worldHeight);
+
+				// Intro Text
+				const introTextEl = $('#introText');
+				introTextEl.trigger('focus');
+				introTextEl.val(input.introText);
+
+				// Player
+				main.modes.entities.player = undefined;
+
+				main.modes.entities.player = new Player(
+					new Vector2(input.player.start[0], input.player.start[1]),
+					new Vector2(input.player.size[0], input.player.size[1]),
+					'#FFFFFF66',
+					1,
+					'#FFFFFF'
+				);
+
+				// NPCs
+				main.modes.entities.npc = [];
+
+				for (const npc of input.enemies) {
+					main.modes.entities.npc.push(
+						new NPC(
+							new Vector2(npc.start[0], npc.start[1]),
+							new Vector2(npc.size[0], npc.size[1]),
+							'#0088FF66',
+							1,
+							'#0088FF'
+						)
+					);
+				}
+
+				// Background - Load Canvas
+				main.modes.backgrounds.sprites = [];
+
+				for (const bg of input.backgrounds) {
+					main.modes.backgrounds.sprites.push(
+						new Background(
+							bg[0],
+							new Vector2(0, 0),
+							new Vector2(0, 0),
+							+bg[2][0]
+						)
+					);
+				}
+
+				// Background - Load select boxes
+				for (let i = 0; i < main.modes.backgrounds.sprites.length; i++) {
+					const fileName = main.modes.backgrounds.sprites[i].getFilename();
+					// First one already exists so we don't need to create a new select box
+					if (i > 0) {
+						main.modes.backgrounds.onAddLayer();
+					}
+
+					$(`#backgroundImg${i}`).val(fileName);
+				}
+
+				// Event Collision - Exit
+				main.modes.collisions.events.exit = undefined;
+				const exitTexture = new Texture(
+					new Vector2(input.eventCollision.exit.pos[0], input.eventCollision.exit.pos[1]),
+					new Vector2(input.eventCollision.exit.size[0], input.eventCollision.exit.size[1]),
+					`${main.modes.collisions.events.eventColor['EXIT']}66`,
+					1,
+					main.modes.collisions.events.eventColor['EXIT']
+				);
+				main.modes.collisions.events.exit = new CollisionEvent('EXIT', 'EXIT', exitTexture);
+
+				// Event Collision - Pitfalls
+				main.modes.collisions.events.eventArr = [];
+
+				for (const pitfall of input.eventCollision.pitfalls) {
+					const pitfallTexture = new Texture(
+						new Vector2(pitfall.pos[0], pitfall.pos[1]),
+						new Vector2(pitfall.size[0], pitfall.size[1]),
+						`${main.modes.collisions.events.eventColor['PITFALLS']}66`,
+						1,
+						main.modes.collisions.events.eventColor['PITFALLS']
+					);
+					main.modes.collisions.events.eventArr.push(
+						new CollisionEvent('PITFALLS', 'PITFALLS', pitfallTexture)
+					);
+				}
+
+				// Event Collision - Generic
+				for (const generic of input.eventCollision.generic) {
+					const genericTexture = new Texture(
+						new Vector2(generic.pos[0], generic.pos[1]),
+						new Vector2(generic.size[0], generic.size[1]),
+						`${main.modes.collisions.events.eventColor['GENERIC']}66`,
+						1,
+						main.modes.collisions.events.eventColor['GENERIC']
+					);
+					main.modes.collisions.events.eventArr.push(
+						new CollisionEvent('GENERIC', '', genericTexture)
+					);
+				}
+
+				// Boundary Collision
+				main.modes.collisions.lines.lineArr = [];
+
+				for (const line of input.collision) {
+					main.modes.collisions.lines.lineArr.push(
+						new Line(
+							new Vector2(line.sx, line.sy),
+							new Vector2(line.ex, line.ey),
+							line.h,
+							line.c,
+							line.n,
+							line.s,
+							new Vector2(0, 0),
+							line.sl,
+							line.b
+						)
+					);
+				}
+
+				// Update canvas (including BG loading hack!)
+				setTimeout(() => main.draw(), 2000);
+
+				// Close dialog
+				main.finalization.dialog.close();
+
+			}
+		},
+		export: {
+			init() {
+				const copyBtn = $('#dialogContent #copy');
+				copyBtn.on('click', main.finalization.export.onCopyClick);
+				$('#copySuccessDiv').hide();
+			},
+			onCopyClick() {
+				const dialogTextarea = $('#dialogTextarea');
+				const dialogTextareaVal = dialogTextarea.val();
+				const copySuccess = $('#copySuccessDiv');
+
+				// Copy the text inside the text field
+				navigator.clipboard.writeText(dialogTextareaVal);
+				
+				copySuccess.fadeIn();
+				setTimeout(() => copySuccess.fadeOut(), 2000);
+			},
+			output() {
+				const output = {};
+				const errors = [];
+
+				// World dimensions
+				output.worldWidth = main.WORLD_WIDTH;
+				output.worldHeight = main.WORLD_HEIGHT;
+
+				// Intro text
+				const introText = $('#introText').val();
+				if ((introText.replace('\n\n', '').trim() !== 'INTRO TEXT')) {
+					output.introText = introText;
+				} else {
+					output.introText = 'Somebody forgot to add intro text...';
+					errors.push('<span class="keyword">INTRO TEXT</span> missing');
+				}
+
+				// PLAYER
+				if (main.modes.entities.player) {
+					output.player = {
+						start: [+main.modes.entities.player.pos.x, +main.modes.entities.player.pos.y],
+						size: [+main.modes.entities.player.size.x, +main.modes.entities.player.size.y]
+					}
+				} else {
+					output.player = {};
+					errors.push('<span class="keyword">PLAYER</span> missing');
+				}
+
+				// NPCs
+				output.enemies = [];
+
+				if (main.modes.entities.npc.length > 0) {
+					for (const npc of main.modes.entities.npc) {
+						output.enemies.push(
+							{
+								start: [+npc.pos.x, +npc.pos.y],
+								size: [+npc.size.x, +npc.size.y],
+								region: {
+									pos: [0, 0],
+									size: [9000, 9000],
+								}
+							}
+						);
+					}
+				} else {
+					errors.push('<span class="keyword">NPCs</span> missing');
+				}
+				
+
+				// Backgrounds
+				output.backgrounds = [];
+
+				if (main.modes.backgrounds.sprites.length > 0) {
+					for (const bg of main.modes.backgrounds.sprites) {
+						console.log(bg);
+						output.backgrounds.push(
+							[
+								`./images/backgrounds/${bg.getFilename()}`,
+								[-200, 0],
+								[bg.getParralaxScroll(), bg.getParralaxScroll()]
+							]
+						);
+					}
+				} else {
+					errors.push('<span class="keyword">BACKGROUNDS</span> missing');
+				}
+
+				// event collision - exit
+				output.eventCollision = {
+					exit: {},
+					pitfalls: {},
+					generic: {}
+				};
+
+				if (main.modes.collisions.events.exit) {
+					const events = main.modes.collisions.events;
+					output.eventCollision = {
+						exit: {
+							pos: [events.exit.getPos().x, events.exit.getPos().y],
+							size: [events.exit.getSize().x, events.exit.getSize().y]
+						}
+					};
+				} else {
+					output.eventCollision.exit = {};
+					errors.push('<span class="keyword">EXIT</span> missing');
+				}
+				
+				// event collision - other
+				output.eventCollision.pitfalls = [];
+				output.eventCollision.generic = [];
+
+				if (main.modes.collisions.events.eventArr.length > 0) {
+					for (const event of main.modes.collisions.events.eventArr) {
+						const type = event.type.toLowerCase();
+						output.eventCollision[type].push(
+							{
+								pos: [event.getPos().x, event.getPos().y],
+								size: [event.getSize().x, event.getSize().y],
+							}
+						);
+					}
+				} else {
+					errors.push('<span class="keyword">EVENTS</span> missing');
+				}
+
+				// Boundary collision
+				output.collision = [];
+
+				if (main.modes.collisions.lines.lineArr.length > 0) {
+					for (const line of main.modes.collisions.lines.lineArr) {
+						output.collision.push(
+							{
+								sx: line.startPos.x,
+								sy: line.startPos.y,
+								ex: line.endPos.x,
+								ey: line.endPos.y,
+								c: line.collision,
+								n: line.normal,
+								s: line.sound,
+								h: line.color,
+								// rx: line.region.x,
+								// ry: line.region.y,
+								sl: line.slope,
+								b: line.yIntercept,
+							}
+						);
+					}
+				} else {
+					errors.push('<span class="keyword">BOUNDARY COLLISION</span> missing');
+
+				}
+
+				const stringified = JSON.stringify(output);
+
+				main.finalization.dialog.show(
+					{
+						title: 'EXPORT',
+						content: stringified,
+						showSave: false,
+						showCopy: true,
+					},
+					errors
+				);
+			}
+		},
+		reset() {
+			main.modes.resetCanvas();
+		},
+		dialog: {
+			show(data, errors = []) {
+				const title = data.title || 'DIALOG';
+				const content = data.content || '';
+				const showSave = data.showSave || false;
+				const showCopy = data.showCopy || false;
+				const dialogColors = { LOAD: '#C68A0D', EXPORT: '#11BE41', DIALOG: '#F11B2B' };
+				const mainColor = dialogColors[title];
 				const dialog = $('#dialog');
 				const headerArea = $('#dialogHeader');
-				headerArea.css('background-color', mainColor);
 				const contentArea = $('#dialogTextarea');
 				const saveBtn = $('#dialogSaveBtn');
-				saveBtn.css('background-color', mainColor);
-				const closeBtn = $('#dialogCloseBtn');
+				const copyBtn = $('#dialogContent #copy');
 				const overlay = $('#dialogOverlay');
+				const errorsDiv = $('#dialogErrors');
+				headerArea.css('background-color', mainColor);
+				saveBtn.css('background-color', mainColor);
 
+				// SAVE BUTTON
 				if (showSave) {
-					saveBtn.on('click', main.toolBox.load.save);
 					saveBtn.show();
 				} else {
 					saveBtn.hide();
 				}
 
+				// COPY BUTTON
+				if (showCopy) {
+					copyBtn.show();
+				} else {
+					copyBtn.hide();
+				}
+
+				// ERRORS
+				if (errors.length > 0) {
+					// Clear current contents
+					errorsDiv.html('');
+					// Append new errors
+					for (const error of errors) {
+						errorsDiv.append(`
+							${error}<br />
+						`);
+					}
+					// Show div
+					errorsDiv.show();
+				}
+
 				headerArea.text(title);
 				contentArea.val(content);
 
-				closeBtn.on('click', main.toolBox.dialog.close);
 				dialog.fadeIn(200);
 				overlay.fadeIn(200);
-
 			},
-			close: function () {
+			close() {
 				$('#dialog').fadeOut(200);
 				$('#dialogOverlay').fadeOut(200);
+				setTimeout(() => {
+					$('#dialogErrors').text('').hide();
+					$('#dialogTextarea').text('');
+				}, 300);
 			}
-		},
-		load: {
-			init: function () {
-				main.toolBox.dialog.show({title: 'LOAD', showSave: true});
-			},
-			save: function () {
-				const content = $('#dialogTextarea');
-				const val = content.val();
-
-				if (val.length === 0) {
-					content.css('background-color', '#FF9999');
-				} else {
-
-					const newarr = JSON.parse(val);
-
-					main.lines = []; // reset
-					for (let l = 0; l < newarr.length; l++) {
-						main.lines.push(
-							new Line(
-								new Vector2(newarr[l].sx, newarr[l].sy),	// StartPos
-								new Vector2(newarr[l].ex , newarr[l].ey),	// EndPos
-								newarr[l].h,								// Color
-								newarr[l].c,								// Collision
-								newarr[l].n,								// Normal
-								newarr[l].s,								// Sound
-								new Vector2(newarr[l].rx, newarr[l].ry),	// Region
-								newarr[l].sl,								// slope
-								newarr[l].b									// yIntercept
-							)
-						);
-					}
-
-				}
-
-				main.toolBox.dialog.close();
-				main.draw();
-
-			}
-		},
-		export : {
-			output: function () {
-				const newarr = [];
-
-				if (main.lines.length > 0) {
-
-					for (let l = 0; l < main.lines.length; l++) {
-						const line = main.lines[l];
-
-						newarr.push({
-							sx: line.startPos.x,
-							sy: line.startPos.y,
-							ex: line.endPos.x,
-							ey: line.endPos.y,
-							c: line.collision,
-							n: line.normal,
-							s: line.sound,
-							h: line.color,
-							rx: line.region.x,
-							ry: line.region.y,
-							sl: line.slope,
-							b: line.yIntercept,
-						});
-					}
-
-					const stringified = JSON.stringify(newarr);
-
-					main.toolBox.dialog.show({title: 'EXPORT', content: stringified, showSave: false});
-
-				}
-			}
-		},
-		reset: function () {
-			main.lines = [];
-			main.input.currentLine = undefined;
-			$('#dialogTextarea').val('');
-			$('#lastPointX').text(0);
-			$('#lastPointY').text(0);
-			main.draw();
 		}
 	},
-	draw: function () {
+	draw() {
 		main.context.clearRect(0, 0, main.CANVAS_WIDTH, main.CANVAS_HEIGHT);
 
-		main.camera.begin();
+		main.camera.camera.begin();
 		
-		if (typeof main.background !== 'undefined' && main.showBackground) main.background.draw();
-		if (main.showGrid) {
-			for (let g = 0; g < main.grid.length; g++) {
-				main.grid[g].draw();
-			}
-		}
-		if (main.showLines) {
-			for (let l = 0; l < main.lines.length; l++) {
-				main.lines[l].draw();
-			}
-
-			if (typeof main.input.currentLine !== 'undefined') {
-				main.input.currentLine.draw();
+		if (main.modes.backgrounds.sprites.length > 0 && main.modes.properties.showBackground) {
+			for (const sprite of main.modes.backgrounds.sprites) {
+				sprite.draw();
 			}
 		}
 
-		main.camera.end();
+		if (main.modes.properties.showLines) {
+			for (const line of main.modes.collisions.lines.lineArr) {
+				line.draw();
+			}
+
+			if (typeof main.modes.collisions.lines.currentLine !== 'undefined') {
+				main.modes.collisions.lines.currentLine.draw();
+			}
+		}
+
+		/* EVENTS */
+		if (main.modes.properties.showEvents) {
+
+			// Event Guide
+			if (main.modes.collisions.events.currentEvent && !main.input.isCtrlDown) {
+				main.modes.collisions.events.currentEvent.draw();
+			}
+
+			// Events
+			for(const event of main.modes.collisions.events.eventArr) {
+				event.draw();
+			}
+
+			// Exit
+			if (main.modes.collisions.events.exit) {
+				main.modes.collisions.events.exit.draw();
+			}
+		}
+
+		/* ENTITIES */
+		if (main.modes.properties.showEntities) {
+
+			// ENTITY GUIDE
+			if (main.modes.active === 'entity' && main.modes.entities.entityGuide && !main.input.isCtrlDown) {
+				main.modes.entities.entityGuide.draw();
+			}
+
+			// NPCs
+			for (const npc of main.modes.entities.npc) {
+				npc.draw();
+			}
+
+			// Player
+			if (main.modes.entities.player) {
+				main.modes.entities.player.draw();
+			}
+
+		}
+		
+		main.camera.camera.end();
 	}
+
 };

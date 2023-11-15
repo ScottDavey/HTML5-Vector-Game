@@ -3,6 +3,7 @@
 <head>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lobster" />
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" />
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira%20Code" />
 	<link rel="stylesheet" href="stylesheet.css" type="text/css" />
 	<script type="text/javascript" language="javascript" src="jquery-1.11.3.min.js"></script>
 	<script type="text/javascript" language="javascript" src="script.js"></script>
@@ -12,19 +13,22 @@
 	<!-- OVERLAY -->
 	<div id="dialogOverlay">&nbsp;</div>
 
-	<!-- DIALOG BOX (EXPORT) -->
+	<!-- DIALOG BOX -->
 	<div id="dialog">
-		<div id="dialogHeader">EXPORT</div>
+		<div id="copySuccessDiv"><span>Copied!</span></div>
+		<div id="dialogHeader">DIALOG</div>
+		<div id="dialogErrors">&nbsp;</div>
 		<div id="dialogContent">
 			<textarea id="dialogTextarea"></textarea>
+			<div id="copy">Copy To Clipboard</div>
 		</div>
-		<div id="dialogFooter" class="cf">
-			<div class="button close" id="dialogCloseBtn">CLOSE</div>
+		<div id="dialogFooter">
 			<div class="button save" id="dialogSaveBtn">LOAD</div>
+			<div class="button close" id="dialogCloseBtn">CLOSE</div>
 		</div>
 	</div>
 
-	<div id="wrapper" class="cf">
+	<div id="wrapper">
 
 		<!-- TOOLBOX -->
 		<div id="toolBox">
@@ -38,81 +42,220 @@
 
 				<h3>Information</h3>
 
-				<div class="cf">
-					<div class="label left">Canvas Size:</div> 
-					<div id="canvasSize">0x, 0y</div>
+				<div class="infoSection">
+					<div class="label">World Size:</div>
+					<div id="worldSize" class="infoValue">0x, 0y</div>
 				</div>
 
-				<div class="cf">
-					<div class="label left">Mouse:</div> 
-					<div class="left"><span id="mouseX">0</span>x, <span id="mouseY">0</span>y</div>
+				<div class="infoSection">
+					<div class="label">Viewport Size:</div>
+					<div id="viewportSize" class="infoValue">0x, 0y</div>
 				</div>
 
-				<div class="cf">
-					<div class="label left">Last Point:</div> 
-					<div class="left"><span id="lastPointX">0</span>x, <span id="lastPointY">0</span>y</div>
+				<div class="infoSection">
+					<div class="label">Mouse:</div> 
+					<div class="infoValue"><span id="mouseX">0</span>x, <span id="mouseY">0</span>y</div>
 				</div>
 
+				<div class="infoSection">
+					<div class="label">Last Point:</div>
+					<div class="infoValue"><span id="lastPointX">0</span>x, <span id="lastPointY">0</span>y</div>
+				</div>
+
+			</div>
+
+			<!-- VIEW BUTTONS -->
+			<div class="section">
+
+				<h3>Tools</h3>
+
+				<div id="viewBtnSection">
+					<div id="properties" class="viewBtn" alt="Properties" title="Properties">&nbsp;</div>
+					<div id="background" class="viewBtn" alt="Background" title="Background">&nbsp;</div>
+					<div id="collision" class="viewBtn" alt="Collision" title="Collision">&nbsp;</div>
+					<div id="entity" class="viewBtn" alt="Entities" title="Entities">&nbsp;</div>
+				</div>
 			</div>
 			
 			<!-- PROPERTIES -->
-			<div id="properties" class="section">
+			<div id="propertiesSection" class="section collapsable">
 
 				<h3>Properties</h3>
 
-				<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="background" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showBackgroundCheckbox">Show Background</label><br />
-				<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="grid">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showGridCheckbox">Show Regions</label><br />
-				<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="lines" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showLinesCheckbox">Show Lines</label><br />
-				<input type="checkbox" id="showSnapCheckbox" class="checkboxes" value="snap" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showSnapCheckbox">Allow Snapping</label><br />
+				<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="Background" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showBackgroundCheckbox">Show Background</label><br />
+				<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="Grid">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showGridCheckbox">Show Regions</label><br />
+				<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="Lines" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showLinesCheckbox">Show Lines</label><br />
+				<input type="checkbox" id="showSnapCheckbox" class="checkboxes" value="Snap" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showSnapCheckbox">Allow Snapping</label><br />
+				<input type="checkbox" id="showEntityCheckbox" class="checkboxes" value="Entities" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showEntityCheckbox">Show Entities</label><br />
+				<input type="checkbox" id="showEventsCheckbox" class="checkboxes" value="Events" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showEventsCheckbox">Show Events</label><br />
+				
+				<textarea id="introText" maxlength="300"></textarea>
+
+			</div>
+
+			<!-- ENTITIES -->
+			<div id="entitySection" class="section collapsable">
+
+				<h3>Entities</h3>
+
+				<div class="subSection">
+					<label for="entityType">Type:</label>
+					<select id="entityType">
+						<option value="player">PLAYER</option>
+						<option value="npc">NPC</option>
+					</select>
+				</div>
+
+				<div class="subSection">
+					<label for="entityWidth">Width:</label>
+					<input type="text" id="entityWidth" class="entitySize" data-type="width" value="40" />
+					<label for="entityHeight">Height:</label>
+					<input type="text" id="entityHeight" class="entitySize" data-type="height" value="65" />
+				</div>
 
 			</div>
 			
-			<!-- BACKGROUND IMAGE -->
-			<div id="background" class="section">
+			<!-- BACKGROUND -->
+			<div id="backgroundSection" class="section collapsable">
 
 				<h3>Background</h3>
 
-				<select id="img"></select>
+				<div id="backgroundModeSection" class="subSection">
+					<div id="backgroundSize" class="backgroundModeBtn active">LEVEL SIZE</div>
+					<div id="backgroundImage" class="backgroundModeBtn">IMAGES</div>
+				</div>
+
+				<!-- BACKGROUND SIZE SECTION -->
+				<div id="backgroundSizeSection">
+
+					<div class="subSection">
+						<label>World:</label>
+						<p>w</p>
+						<input type="text" id="worldWidth" class="backgroundSize" value="2560" />
+						<p>h</p>
+						<input type="text" id="worldHeight" class="backgroundSize" value="1440" />
+					</div>
+
+					<div class="subSection">
+						<label>Viewport:</label>
+						<p>w</p>
+						<input type="text" id="viewportWidth" class="backgroundSize" value="1280" />
+						<p>h</p>
+						<input type="text" id="viewportHeight" class="backgroundSize" value="720" />
+					</div>
+
+					<div class="subSection">
+						<div id="backgroundApplyBtn">APPLY</div>
+					</div>
+
+				</div>
+
+				<!-- BACKGROUND IMAGE SECTION -->
+				<div id="backgroundImageSection">
+
+					<div id="backgroundLayers">
+
+						<!-- These "row" will be duplicated in JS -->
+						<div class="row">
+
+							<label for="backgroundImg0">0:</label>
+
+							<select id="backgroundImg0" data-index="0" class="backgroundImg">
+								<option value="-1">Choose Something</option>
+							</select>
+
+							<div class="backgroundPropertiesBtn">&nbsp;</div>
+
+						</div>
+						
+					</div>
+					
+					<div class="addLayer">+Add Layer</div>
+
+				</div>
 
 			</div>
 			
 			<!-- COLLISION -->
-			<div id="collision" class="section">
+			<div id="collisionSection" class="section collapsable">
 				<h3>Collision</u></h3>
-				<ul class="cf">
-					<li class="lineType toggleBtn active">FLOOR</li>
-					<li class="lineType toggleBtn">WALL</li>
-					<li class="lineType toggleBtn">CEILING</li>
-				</ul>
+
+			<div id="collisionTypes">
+					<div id="lines" class="collisionType">LINE</div>
+					<div id="events" class="collisionType">EVENT</div>
+				</div>
+
+				<!-- COLLISION: Lines -->
+				<div id="linesSection" class="subSection">
+					
+					<div class="linePropertiesDiv">
+						<label for="lineType">Type:</label>
+						<select id="lineType">
+							<option value="FLOOR">FLOOR</option>
+							<option value="WALL">WALL</option>
+							<option value="CEILING">CEILING</option>
+						</select>
+					</div>
+
+					<div class="linePropertiesDiv">
+						<label for="lineNormal">Normal:</label>
+						<div id="normalIcon">&nbsp;</div>
+						<select id="lineNormal" readonly disabled>
+							<option value="-1">UP / LEFT</option>
+							<option value="1">DOWN / RIGHT</option>
+						</select>
+					</div>
+
+					<div class="linePropertiesDiv">
+						<label for="lineSound">Sound:</label>
+						<input type="text" id="lineSound" value="WOOD">
+					</div>
+
+				</div>
+
+				<!-- COLLISION: Events -->
+				<div id="eventsSection" class="subSection">
+					
+					<div class="eventPropertiesDiv">
+						<label for="eventType">Type:</label>
+						<select id="eventType">
+							<option value="EXIT" data-defaultname="EXIT">EXIT</option>
+							<option value="PITFALLS" data-defaultname="PITFALLS">PITFALLS</option>
+							<option value="GENERIC" data-defaultname="">GENERIC</option>
+						</select>
+					</div>
+
+					<div id="eventNameDiv" class="eventPropertiesDiv">
+						<label for="eventName">Name:</label>
+						<input type="text" id="eventName" value=""/>
+					</div>
+
+				</div>
 				
-				<br />
-
-				<label for="lineNormal">Line Normal:</label>&nbsp;&nbsp;&nbsp;
-				<select id="lineNormal" readonly disabled>
-					<option value="-1">UP / LEFT</option>
-					<option value="1">DOWN / RIGHT</option>
-				</select>
-
-				<br /><br />
-
-				<label for="lineSound">Line Sound:</label>&nbsp;&nbsp;&nbsp;<input type="text" id="lineSound" value="WOOD">
 			</div>
 			
-			<!-- LOAD BUTTON -->
 			<div class="section">
-				<div class="actionBtn" id="loadBtn">LOAD</div>
+				<h3>Finalization</h3>
+
+				<div id="btnSection">
+
+					<!-- LOAD BUTTON -->
+					<div class="actionBtn" id="loadBtn">LOAD</div>
+
+					<!-- EXPORT BUTTON -->
+					<div class="actionBtn" id="exportBtn">EXPORT</div>
+
+					<!-- RESET BUTTON -->
+					<div class="actionBtn" id="resetBtn">RESET</div>
+
+				</div>
 			</div>
 
-			<!-- EXPORT BUTTON -->
-			<div class="section">
-				<div class="actionBtn" id="exportBtn">EXPORT</div>
-			</div>
+		</div>
 
-			<!-- RESET BUTTON -->
-			<div class="section">
-				<div class="actionBtn" id="resetBtn">RESET</div>
-			</div>
-
+		<!-- ToolBox Hide Bar -->
+		<div id="toolBoxHideBar">
+			<span id="arrow">&lt;</span>
 		</div>
 
 		<!-- CANVAS -->
