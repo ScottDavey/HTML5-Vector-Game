@@ -218,11 +218,11 @@ class Sprite {
 		return this.filename;
 	}
 
-	SetImage(path) {
+	updateImage(path) {
 		this.img.setAttribute('src', path);
 	}
 	
-	update(pos) {
+	updatePos(pos) {
 		this.pos = pos;
 	}
 	
@@ -234,29 +234,38 @@ class Sprite {
 
 class Background extends Sprite {
 
-	constructor(path, pos, size, parralaxScroll) {
+	constructor(path, pos, size, isRepeating = false, parallax = new Vector2(0, 0)) {
 		super(path, pos, size);
-		this.parralaxScroll = parralaxScroll;
+		this.isRepeating = isRepeating;
+		this.parallax = parallax;
 	}
 
 	getFilename() {
 		return super.getFilename();
 	}
 
-	getParralaxScroll() {
-		return this.parralaxScroll;
+	getParallax() {
+		return this.parallax;
 	}
 
-	setParralax(val) {
-		this.parralaxScroll = val;
+	getRepeat() {
+		return this.isRepeating;
 	}
 
-	SetImage(path) {
-		super.SetImage(path);
+	updateImage(path) {
+		super.updateImage(path);
 	}
 
-	update(pos) {
-		super.update(pos);
+	updatePos(pos) {
+		super.updatePos(pos);
+	}
+
+	updateRepeat(isRepeating) {
+		this.isRepeating = isRepeating;
+	}
+
+	updateParallax(parallax) {
+		this.parallax = parallax;
 	}
 
 	draw() {
@@ -370,6 +379,7 @@ const main = {
 		main.camera.init();
 		main.modes.init();
 		main.finalization.init();
+		main.toggleLoading(false);
 		
 		setTimeout(() => main.draw(), 1000);	// Hack to get around the fact that the image isn't loaded right away.
 	},
@@ -384,9 +394,8 @@ const main = {
 		init() {
 			main.input.previousMousePos = new Vector2(0, 0);
 			main.canvas.addEventListener('mousedown', e => main.input.onMouseDown(e), false);
-			main.canvas.addEventListener('mouseup', e => main.input.onMouseUp(e), false);
-			main.canvas.addEventListener('mousemove', e => main.input.onMouseMove(e), false);
-			main.canvas.addEventListener('wheel', e => main.input.onMouseWheel(e), false);
+			document.addEventListener('mouseup', e => main.input.onMouseUp(e), false);
+			document.addEventListener('mousemove', e => main.input.onMouseMove(e), false);
 			document.addEventListener('keydown', e => main.input.onKeyDown(e), false);
 			document.addEventListener('keyup', e => main.input.onKeyUp(e), false);
 		},
@@ -518,6 +527,9 @@ const main = {
 
 			// update the camera (the Camera.moveTo function calls Camera.updateViewport where main.draw() is called)
 			main.camera.camera.moveTo(main.camera.position.x, main.camera.position.y);
+
+			// Apply parallax scrolling to the backgrounds
+			main.modes.backgrounds.parallax(main.camera.position);
 		}
 	},
 	modes: {
@@ -1134,6 +1146,7 @@ const main = {
 				$('#backgroundImg0').on('change', main.modes.backgrounds.onBackgroundChange);
 				$('.addLayer').on('click', main.modes.backgrounds.onAddLayer);
 				$('#backgroundApplyBtn').on('click', main.modes.backgrounds.onBackgroundSizeChange);
+				$('.backgroundPropertiesBtn').on('click', main.modes.backgrounds.backgroundProperties.init);
 				main.modes.backgrounds.reset();
 				main.modes.backgrounds.set('backgroundSize');
 				main.modes.backgrounds.loadBGs(0);
@@ -1203,24 +1216,25 @@ const main = {
 
 				const selectedWidth = selected.data('width');
 				const selectedHeight = selected.data('height');
-				const imagePath = `images/${selectedVal}`;
+				const imagePath = `images/backgrounds/${selectedVal}`;
 				const toolWidthField = $('#backgroundWidth');
 				const toolHeightField = $('#backgroundHeight');
 
 				// Find the index we're changing
 				const selectIndex = +thisImageEl.data('index');
-				const parralaxScroll = (selectIndex * 0.18).toFixed(1);
+				const parallax = new Vector2(0, 0);
 
 				// If that index already exists, then we're updating. Otherwise we're creating new
 				if (main.modes.backgrounds.sprites[selectIndex]) {
-					main.modes.backgrounds.sprites[selectIndex].SetImage(imagePath);
+					main.modes.backgrounds.sprites[selectIndex].updateImage(imagePath);
 				} else {
 					main.modes.backgrounds.sprites.push(
 						new Background(
 							imagePath,
 							new Vector2(0, 0),
 							new Vector2(selectedWidth, selectedHeight),
-							parralaxScroll
+							false,
+							parallax
 						)
 					);
 				}
@@ -1240,7 +1254,11 @@ const main = {
 
 				thisImageEl.trigger('blur');
 
-				setTimeout(() => main.draw(), 2000);
+				main.toggleLoading(true);
+				setTimeout(() => {
+					main.draw();
+					main.toggleLoading(false);
+				}, 1000);
 			},
 			onBackgroundSizeChange() {
 				const worldWidthEl = $('#worldWidth');
@@ -1256,8 +1274,12 @@ const main = {
 					new Vector2(worldWidthVal, worldHeightVal),
 					new Vector2(viewportWidthVal, viewportHeightVal)
 				);
-
-				setTimeout(() => main.draw(), 2000);
+				
+				main.toggleLoading(true);
+				setTimeout(() => {
+					main.draw();
+					main.toggleLoading(false);
+				}, 1000);
 
 			},
 			onAddLayer() {
@@ -1281,8 +1303,70 @@ const main = {
 				main.modes.backgrounds.loadBGs(selectIndex);
 
 				const newSelectEl = $(`#backgroundImg${selectIndex}`);
+				const newBGPropertiesBtn = newSelectEl.parent('.row').find('.backgroundPropertiesBtn');
 				newSelectEl.on('change', main.modes.backgrounds.onBackgroundChange);
+				newBGPropertiesBtn.on('click', main.modes.backgrounds.backgroundProperties.init);
+			},
+			backgroundProperties: {
+				init() {
+					const propertiesEl = $(this);
+					const parentRow = propertiesEl.parent('.row');
+					const backgroundImg = parentRow.find('.backgroundImg');
+					const index = backgroundImg.data('index');
+					const currentProperties = main.modes.backgrounds.sprites[index] || {};
+					const backgroundImageSection = $('#backgroundImageSection');
 
+					// Make sure we don't open more than 1 at a time, and that we've selected a BG
+					if ($('.backgroundPropertyDiv').length > 0 || +backgroundImg.val() === -1) {
+						return;
+					}
+
+					backgroundImageSection.append(`
+						<div class="backgroundPropertyDiv">
+							<input type="hidden" class="backgroundIndex" value="${index}" />
+							<div class="header">
+								<div class="title">Background ${index} Properties</div>
+								<div class="close">X</div>
+							</div>
+							<div class="fields">
+								<div class="row">
+									<label for="backgroundRepeat${index}">Repeating:</label>
+									<select id="backgroundRepeat${index}">
+										<option value="0" ${+(currentProperties.getRepeat() || 0) === 0 ? 'selected' : ''}>No</option>
+										<option value="1" ${+(currentProperties.getRepeat() || 0) === 1 ? 'selected' : ''}>Yes</option>
+									</select>
+								</div>
+
+								<div class="row">
+									<label for="backgroundParallax${index}">Parallax:</label>
+									<p>x</p>
+									<input type="text" id="backgroundParallaxX${index}" class="backgroundParallax" value="${currentProperties.getParallax().x || 0.0}" />
+									<p>y</p>
+									<input type="text" id="backgroundParallaxY${index}" class="backgroundParallax" value="${currentProperties.getParallax().y || 0.0}" />
+								</div>
+							</div>
+						</div>
+					`);
+
+					// Close by just removing the element
+					$('.backgroundPropertyDiv .header .close').on('click', main.modes.backgrounds.backgroundProperties.save);
+				},
+				save() {
+					const thisPropertiesBox = $(this).parent('.header').parent('.backgroundPropertyDiv');
+					const backgroundIndex = thisPropertiesBox.find('.backgroundIndex').val();
+					const backgroundImage = main.modes.backgrounds.sprites[backgroundIndex];
+					
+					// Update the appropriate Background image based on the index
+					if (backgroundImage) {
+						const isRepeating = +$(`#backgroundRepeat${backgroundIndex}`).val();
+						const parallaxX = +$(`#backgroundParallaxX${backgroundIndex}`).val();
+						const parallaxY = +$(`#backgroundParallaxY${backgroundIndex}`).val();
+						backgroundImage.updateParallax(new Vector2(parallaxX, parallaxY));
+						backgroundImage.updateRepeat(isRepeating === 1 ? true : false);
+					}
+
+					thisPropertiesBox.remove();
+				}
 			},
 			setBackgroundSize(worldSize, viewportSize) {
 				// Reset global dimensions
@@ -1302,8 +1386,15 @@ const main = {
 				// Update camera
 				main.camera.camera.updateViewport();
 			},
-			parralaxScroll() {
-				
+			parallax(cameraPosition) {
+				for (const background of main.modes.backgrounds.sprites) {
+					background.updatePos(
+						new Vector2(
+							cameraPosition.x * background.getParallax().x,
+							cameraPosition.y * background.getParallax().y
+						)
+					);
+				}
 			}
 		},
 		checkRectIntersect(rect1, rect2) {
@@ -1455,10 +1546,11 @@ const main = {
 				for (const bg of input.backgrounds) {
 					main.modes.backgrounds.sprites.push(
 						new Background(
-							bg[0],
-							new Vector2(0, 0),
-							new Vector2(0, 0),
-							+bg[2][0]
+							bg.path,
+							new Vector2(bg.pos[0], bg.pos[1]),
+							new Vector2(bg.size[0], bg.size[1]),
+							bg.isRepeating,
+							new Vector2(bg.parallax[0], bg.parallax[1])
 						)
 					);
 				}
@@ -1535,7 +1627,11 @@ const main = {
 				}
 
 				// Update canvas (including BG loading hack!)
-				setTimeout(() => main.draw(), 2000);
+				main.toggleLoading(true);
+				setTimeout(() => {
+					main.draw();
+					main.toggleLoading(false);
+				}, 2000);
 
 				// Close dialog
 				main.finalization.dialog.close();
@@ -1613,13 +1709,14 @@ const main = {
 
 				if (main.modes.backgrounds.sprites.length > 0) {
 					for (const bg of main.modes.backgrounds.sprites) {
-						console.log(bg);
 						output.backgrounds.push(
-							[
-								`./images/backgrounds/${bg.getFilename()}`,
-								[-200, 0],
-								[bg.getParralaxScroll(), bg.getParralaxScroll()]
-							]
+							{
+								path: `./images/backgrounds/${bg.getFilename()}`,
+								pos: [-200, 0],
+								size: [0, 0],
+								isRepeating: false,
+								parallax: [bg.getParallax().x, bg.getParallax().y]
+							}
 						);
 					}
 				} else {
@@ -1767,6 +1864,16 @@ const main = {
 					$('#dialogTextarea').text('');
 				}, 300);
 			}
+		}
+	},
+	toggleLoading(show = false) {
+		const loadingOverlay = $('#loadingOverlay');
+		loadingOverlay.css({ width: main.CANVAS_WIDTH + 12, height: main.CANVAS_HEIGHT + 3 });
+		
+		if (show) {
+			loadingOverlay.fadeIn();
+		} else {
+			loadingOverlay.fadeOut();
 		}
 	},
 	draw() {
