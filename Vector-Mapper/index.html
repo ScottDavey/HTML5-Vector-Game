@@ -82,14 +82,35 @@
 
 				<h3>Properties</h3>
 
-				<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="Background" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showBackgroundCheckbox">Show Background</label><br />
-				<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="Grid">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showGridCheckbox">Show Regions</label><br />
-				<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="Lines" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showLinesCheckbox">Show Lines</label><br />
-				<input type="checkbox" id="showSnapCheckbox" class="checkboxes" value="Snap" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showSnapCheckbox">Allow Snapping</label><br />
-				<input type="checkbox" id="showEntityCheckbox" class="checkboxes" value="Entities" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showEntityCheckbox">Show Entities</label><br />
-				<input type="checkbox" id="showEventsCheckbox" class="checkboxes" value="Events" checked="true">&nbsp;&nbsp;&nbsp;&nbsp;<label for="showEventsCheckbox">Show Events</label><br />
-				
-				<textarea id="introText" maxlength="300"></textarea>
+				<div class="propertiesRow">
+					<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="Background" checked="true">
+					<label class="bump up3" for="showBackgroundCheckbox">Show Background</label>
+				</div>
+				<div class="propertiesRow">
+					<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="Grid">
+					<label class="bump up3" for="showGridCheckbox">Show Regions</label>
+				</div>
+				<div class="propertiesRow">
+					<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="Lines" checked="true">
+					<label class="bump up3" for="showLinesCheckbox">Show Lines</label>
+				</div>
+				<div class="propertiesRow">
+					<input type="checkbox" id="showSnapCheckbox" class="checkboxes bump down2" value="Snap" checked="true">
+					<label for="showSnapCheckbox" class="bump down1">Allow Snapping</label>
+					<input type="text" id="lineSnapThreshold" alt="Line snap threshold" title="Line snap threshold" value="10">
+
+				</div>
+				<div class="propertiesRow">
+					<input type="checkbox" id="showEntityCheckbox" class="checkboxes" value="Entities" checked="true">
+					<label class="bump up3" for="showEntityCheckbox">Show Entities</label>
+				</div>
+				<div class="propertiesRow">
+					<input type="checkbox" id="showEventsCheckbox" class="checkboxes" value="Events" checked="true">
+					<label class="bump up3" for="showEventsCheckbox">Show Events</label>
+				</div>
+				<div class="propertiesRow">
+					<textarea id="introText" maxlength="300"></textarea>
+				</div>
 
 			</div>
 
@@ -183,6 +204,7 @@
 			<div id="collisionTypes">
 					<div id="lines" class="collisionType">LINE</div>
 					<div id="events" class="collisionType">EVENT</div>
+					<!-- <div id="hazard" class="collisionType">HAZARD</div> -->
 				</div>
 
 				<!-- COLLISION: Lines -->
@@ -199,10 +221,10 @@
 
 					<div class="linePropertiesDiv">
 						<label for="lineNormal">Normal:</label>
-						<div id="normalIcon">&nbsp;</div>
+						<!-- <div id="normalIcon">&nbsp;</div> -->
 						<select id="lineNormal" readonly disabled>
-							<option value="-1">UP / LEFT</option>
-							<option value="1">DOWN / RIGHT</option>
+							<option value="-1">&rarr;|</option>
+							<option value="1">|&larr;</option>
 						</select>
 					</div>
 
@@ -229,6 +251,13 @@
 						<label for="eventName">Name:</label>
 						<input type="text" id="eventName" value=""/>
 					</div>
+
+				</div>
+
+				<!-- COLLISION: Hazards -->
+				<div id="hazardSection" class="subSection">
+
+
 
 				</div>
 				
@@ -258,13 +287,14 @@
 			<span id="arrow">&lt;</span>
 		</div>
 
-		<!-- Loading -->
-		<div id="loadingOverlay">
-			<img src="images/loading_plain.gif" id="loadingGif" />
-		</div>
-
 		<!-- CANVAS -->
 		<div id="content">
+			
+			<!-- Loading -->
+			<div id="loadingOverlay">
+				<img src="images/loading_plain.gif" id="loadingGif" />
+			</div>
+			
 			<canvas id="canvas"></canvas>
 		</div>
 

@@ -232,12 +232,17 @@ class Sprite {
 
 }
 
-class Background extends Sprite {
+class Background {
 
 	constructor(path, pos, size, isRepeating = false, parallax = new Vector2(0, 0)) {
-		super(path, pos, size);
+		this.path = path;
+		this.pos = pos;
+		this.size = size;
 		this.isRepeating = isRepeating;
 		this.parallax = parallax;
+		this.sprites = [];
+
+		this.refreshRepeatingSprites();
 	}
 
 	getFilename() {
@@ -253,23 +258,56 @@ class Background extends Sprite {
 	}
 
 	updateImage(path) {
-		super.updateImage(path);
+		this.path = path;
+		this.refreshRepeatingSprites();
 	}
 
 	updatePos(pos) {
-		super.updatePos(pos);
-	}
-
-	updateRepeat(isRepeating) {
-		this.isRepeating = isRepeating;
+		for (let i = 0; i < this.sprites.length; i++) {
+			this.sprites[i].updatePos(
+				new Vector2(
+					pos.x + (i * this.size.x),
+					pos.y
+				)
+			);
+		}
 	}
 
 	updateParallax(parallax) {
 		this.parallax = parallax;
 	}
 
+	updateRepeat(isRepeating) {
+		this.isRepeating = isRepeating;
+		this.refreshRepeatingSprites();
+	}
+
+	refreshRepeatingSprites() {
+		let numberOfBackgrounds = 1;
+
+		// First delete all sprite before re-creating them
+		this.sprites = [];
+		
+		if (this.isRepeating) {
+			numberOfBackgrounds = Math.ceil(main.WORLD_WIDTH / this.size.x);
+		}
+
+		for (let i = 0; i < numberOfBackgrounds; i++) {
+			this.sprites.push(
+				new Sprite(
+					this.path,
+					new Vector2(this.pos.x + (i * this.size.x), this.pos.y),
+					new Vector2(this.size.x, this.size.y)
+				)
+			);
+		}
+
+	}
+
 	draw() {
-		super.draw();
+		for (const sprite of this.sprites) {
+			sprite.draw();
+		}
 	}
 
 }
@@ -364,6 +402,10 @@ const main = {
 		this.CANVAS_HEIGHT = 0;
 		this.WORLD_WIDTH = 0;
 		this.WORLD_HEIGHT = 0;
+		this.initialWorldWidth = 2560;
+		this.initialWorldHeight = 1440;
+		this.initialViewportWidth = 1280;
+		this.initialViewportHeight = 720;
 		this.canvas = document.getElementById('canvas');
 		this.jCanvas = $('#canvas');
 		this.canvas.width = this.CANVAS_WIDTH;
@@ -379,9 +421,17 @@ const main = {
 		main.camera.init();
 		main.modes.init();
 		main.finalization.init();
-		main.toggleLoading(false);
+		$('input[type=text]').on('focus', main.autoSelectTextboxContents);	// Automatically select text in a text box
 		
-		setTimeout(() => main.draw(), 1000);	// Hack to get around the fact that the image isn't loaded right away.
+		main.loading.toggle(true);
+		setTimeout(() => {
+			main.draw();
+			main.loading.toggle(false);
+		}, 1000);
+	},
+	autoSelectTextboxContents() {
+		const thisEl = $(this);
+		thisEl.select();
 	},
 	input: {
 		previousMousePos: undefined,
@@ -394,8 +444,8 @@ const main = {
 		init() {
 			main.input.previousMousePos = new Vector2(0, 0);
 			main.canvas.addEventListener('mousedown', e => main.input.onMouseDown(e), false);
+			document.getElementById('content').addEventListener('mousemove', e => main.input.onMouseMove(e), false);
 			document.addEventListener('mouseup', e => main.input.onMouseUp(e), false);
-			document.addEventListener('mousemove', e => main.input.onMouseMove(e), false);
 			document.addEventListener('keydown', e => main.input.onKeyDown(e), false);
 			document.addEventListener('keyup', e => main.input.onKeyUp(e), false);
 		},
@@ -568,6 +618,15 @@ const main = {
 
 				main.modes.properties[`show${val}`] = isChecked;
 
+				if (val === 'Snap') {
+					const lineSnapThreshold = $('#lineSnapThreshold');
+					if (isChecked) {
+						lineSnapThreshold.attr({ readonly: false, disabled: false });
+					} else {
+						lineSnapThreshold.attr({ readonly: true, disabled: true });
+					}
+				}
+
 				main.draw();
 			},
 			onIntroTextFocus() {
@@ -729,9 +788,11 @@ const main = {
 					$('#lineType')
 						.on('change', main.modes.collisions.lines.onTypeChange)
 						.trigger('change');
+					/*
 					$('#lineNormal')
 						.on('change', main.modes.collisions.lines.onLineNormalChange)
 						.trigger('change');
+					*/
 				},
 				onTypeChange() {
 					const that = $(this);
@@ -778,48 +839,42 @@ const main = {
 					const lineSound = $('#lineSound').val();
 					const lineNormal = $('#lineNormal').val();
 					const lineColor = main.modes.collisions.lines.linesColors[lineType];
-					let coordDiff, startPos, endPos;
-
-					if (typeof main.modes.collisions.lines.currentLine === 'undefined') {
-						// Begin creating our new line
-						coordDiff = 6;
-						// If we're allowing snapping and our click was within 5 pixels of our last line's endPos, snap it.
-						if (main.modes.properties.allowSnapping && typeof main.modes.collisions.lines.lastEndPos !== 'undefined') {
-							const dX = (main.modes.collisions.lines.lastEndPos.x - mousePosition.x);
-							const dY = (main.modes.collisions.lines.lastEndPos.y - mousePosition.y);
-							coordDiff = Math.sqrt(dX*dX + dY*dY);
-						}
-						// If the difference is less than specified, snap it.
-						if (coordDiff <= 5) {
-							startPos = new Vector2(main.modes.collisions.lines.lastEndPos.x, main.modes.collisions.lines.lastEndPos.y);
-						} else {
-							startPos = new Vector2(mousePosition.x, mousePosition.y);
-						}
-
-						main.modes.collisions.lines.currentLine = new Line(startPos, new Vector2(mousePosition.x, mousePosition.y), lineColor, lineType, lineNormal, lineSound);
+					let snappedPosition;
+					
+					// If we're allowing snapping, find a line point that's close by
+					if (main.modes.properties.allowSnapping) {
+						linePosition = main.modes.collisions.lines.snapToLine(mousePosition);
 					} else {
+						linePosition = new Vector2(mousePosition.x, mousePosition.y);
+					}
 
-						endPos = new Vector2(mousePosition.x, mousePosition.y);
+					if (!main.modes.collisions.lines.currentLine) {
+						// Begin creating our new line
+						main.modes.collisions.lines.currentLine = new Line(
+							linePosition,
+							new Vector2(mousePosition.x, mousePosition.y),
+							lineColor,
+							lineType,
+							lineNormal,
+							lineSound
+						);
+					} else {
 
 						// Our walls need to be completely vertical.
 						if (lineType === 'WALL') {
-
-							endPos.x = main.modes.collisions.lines.currentLine.startPos.x;
-
+							linePosition.x = main.modes.collisions.lines.currentLine.startPos.x;
 						} else if (main.input.isShiftDown) {
-
 							// Make the line perfectly level (on the x axis)
-							endPos.y = main.modes.collisions.lines.currentLine.startPos.y;
-
+							linePosition.y = main.modes.collisions.lines.currentLine.startPos.y;
 						}					
 
 						// We need to make sure the lines are going in the proper direction.
 						// If the start position (x,y) is greater than the end position, switch them
-						if (main.modes.collisions.lines.currentLine.startPos.x > endPos.x || (lineType === 'WALL' && main.modes.collisions.lines.currentLine.startPos.y > endPos.y)) {
+						if (main.modes.collisions.lines.currentLine.startPos.x > linePosition.x || (lineType === 'WALL' && main.modes.collisions.lines.currentLine.startPos.y > linePosition.y)) {
 							main.modes.collisions.lines.currentLine.endPos = main.modes.collisions.lines.currentLine.startPos;
-							main.modes.collisions.lines.currentLine.startPos = endPos;
+							main.modes.collisions.lines.currentLine.startPos = linePosition;
 						} else {
-							main.modes.collisions.lines.currentLine.endPos = endPos;
+							main.modes.collisions.lines.currentLine.endPos = linePosition;
 						}
 
 						// Based on the line's start position, calculate what region it's in
@@ -839,13 +894,36 @@ const main = {
 						// Push our new line to the lines array, then reset our currentLine variable
 						main.modes.collisions.lines.lineArr.push(main.modes.collisions.lines.currentLine);
 						main.modes.collisions.lines.currentLine = undefined;
-						main.modes.collisions.lines.lastEndPos = endPos;
+						main.modes.collisions.lines.lastEndPos = linePosition;
 						main.draw();
 					}
 
 					// UPDATE INFO
 					$('#lastPointX').text(mousePosition.x);
 					$('#lastPointY').text(mousePosition.y);
+				},
+				snapToLine(mousePosition) {
+					const lineSnapThreshold = +$('#lineSnapThreshold').val() || 10;
+					let startPos = new Vector2(mousePosition.x, mousePosition.y);
+
+					// Loop over each line - both start position and end - to see if we're close
+					for (const line of main.modes.collisions.lines.lineArr) {
+
+						// Create a rectangle, 10px wide, with the point as the center
+						const lineStartRect = new Rectangle(line.startPos.x - 5, line.startPos.y - 5, lineSnapThreshold, lineSnapThreshold);
+						const lineEndRect = new Rectangle(line.endPos.x - 5, line.endPos.y - 5, lineSnapThreshold, lineSnapThreshold);
+						const mousePointRect = new Rectangle(mousePosition.x - 5, mousePosition.y - 5, lineSnapThreshold, lineSnapThreshold);
+
+						// Overwrite our startPos if we found a line point
+						if (main.modes.checkRectIntersect(mousePointRect, lineStartRect)) {
+							startPos = new Vector2(line.startPos.x, line.startPos.y);
+						} else if (main.modes.checkRectIntersect(mousePointRect, lineEndRect)) {
+							startPos = new Vector2(line.endPos.x, line.endPos.y);
+						}
+
+					}
+					
+					return startPos;
 				},
 				showEnd(xPanned, yPanned) {
 					if (main.modes.collisions.lines.currentLine.collision === 'WALL') {
@@ -1077,6 +1155,9 @@ const main = {
 					}
 				}
 			},
+			hazards: {
+				
+			},
 			onBtnClick() {
 				const thisType = $(this);
 				const type = thisType.attr('id');
@@ -1113,24 +1194,30 @@ const main = {
 			active: undefined,
 			sprites: [],
 			imageOptions: [
-				{ filename: '7680x720-Charcoal-Background.jpg', width: 7680, height: 720, },
-				{ filename: 'Blank-2560x1440.jpg', width: 2560, height: 1440, },
-				{ filename: 'LEVEL_1.png', width: 1024, height: 590, },
-				{ filename: 'LEVEL_3.jpg', width: 839, height: 393, },
-				{ filename: 'LEVEL_4.jpg', width: 1920, height: 1080, },
-				{ filename: 'LEVEL_4_Sized.jpg', width: 1280, height: 720, },
-				{ filename: 'LEVEL_5.jpg', width: 1200, height: 675, },
-				{ filename: 'LEVEL_6.jpg', width: 1280, height: 720, },
-				{ filename: 'BG0.png', width: 8064, height: 648, },
-				{ filename: 'BG1.png', width: 8064, height: 648, },
-				{ filename: 'BG2.png', width: 8064, height: 648, },
-				{ filename: 'BG3.png', width: 8064, height: 648, },
-				{ filename: 'BG4.png', width: 8064, height: 648, },
-				{ filename: 'Background_1.png', width: 3000, height: 1143, },
-				{ filename: 'Background_2.png', width: 3000, height: 1143, },
-				{ filename: 'Background_3.png', width: 3000, height: 1143, },
-				{ filename: 'Background_4.png', width: 1280, height: 1143, },
-				{ filename: 'moon.png', width: 900, height: 900, },
+				{ filename: '7680x720-Charcoal-Background.jpg', optgroup: 'GENERAL', layer: 0, width: 7680, height: 720, },
+				{ filename: 'Blank-2560x1440.jpg', optgroup: 'GENERAL', layer: 0, width: 2560, height: 1440, },
+				{ filename: 'LEVEL_1.png', optgroup: 'GENERAL', layer: 0, width: 1024, height: 590, },
+				{ filename: 'LEVEL_3.jpg', optgroup: 'GENERAL', layer: 0, width: 839, height: 393, },
+				{ filename: 'LEVEL_4.jpg', optgroup: 'GENERAL', layer: 0, width: 1920, height: 1080, },
+				{ filename: 'LEVEL_4_Sized.jpg', optgroup: 'GENERAL', layer: 0, width: 1280, height: 720, },
+				{ filename: 'LEVEL_5.jpg', optgroup: 'GENERAL', layer: 0, width: 1200, height: 675, },
+				{ filename: 'LEVEL_6.jpg', optgroup: 'GENERAL', layer: 0, width: 1280, height: 720, },
+				{ filename: 'BG0.png', optgroup: 'JUNGLE', layer: 0, width: 8064, height: 648, },
+				{ filename: 'BG1.png', optgroup: 'JUNGLE', layer: 1, width: 8064, height: 648, },
+				{ filename: 'BG2.png', optgroup: 'JUNGLE', layer: 2, width: 8064, height: 648, },
+				{ filename: 'BG3.png', optgroup: 'JUNGLE', layer: 3, width: 8064, height: 648, },
+				{ filename: 'BG4.png', optgroup: 'JUNGLE', layer: 4, width: 8064, height: 648, },
+				{ filename: 'Blockland-BG-0.png', optgroup: 'BLOCKLAND', layer: 0, width: 6000, height: 648, },
+				{ filename: 'Blockland-BG-1.png', optgroup: 'BLOCKLAND', layer: 1, width: 6000, height: 648, },
+				{ filename: 'Blockland-BG-2.png', optgroup: 'BLOCKLAND', layer: 2, width: 6000, height: 648, },
+				{ filename: 'Blockland-BG-3.png', optgroup: 'BLOCKLAND', layer: 3, width: 6000, height: 648, },
+				{ filename: 'Blockland-BG-4.png', optgroup: 'BLOCKLAND', layer: 4, width: 6000, height: 648, },
+				{ filename: 'Background_1.png', optgroup: 'GRAVEYARD', layer: 0, width: 3000, height: 1143, },
+				{ filename: 'Background_2.png', optgroup: 'GRAVEYARD', layer: 2, width: 3000, height: 1143, },
+				{ filename: 'Background_3.png', optgroup: 'GRAVEYARD', layer: 3, width: 3000, height: 1143, },
+				{ filename: 'Background_4.png', optgroup: 'GRAVEYARD', layer: 4, width: 1280, height: 1143, },
+				{ filename: 'moon.png', optgroup: 'GRAVEYARD', layer: 1, width: 900, height: 900, },
+				{ filename: 'moon_blur.png', optgroup: '', layer: 1, width: 879, height: 875, },
 			],
 			imageSelectOpeners: [
 				'Pick something... quickly',
@@ -1151,8 +1238,8 @@ const main = {
 				main.modes.backgrounds.set('backgroundSize');
 				main.modes.backgrounds.loadBGs(0);
 				main.modes.backgrounds.setBackgroundSize(
-					new Vector2(2560, 1440),
-					new Vector2(1280, 720)
+					new Vector2(main.initialWorldWidth, main.initialWorldHeight),
+					new Vector2(main.initialViewportWidth, main.initialViewportHeight)
 				);
 			},
 			onModeChange() {
@@ -1189,18 +1276,36 @@ const main = {
 			loadBGs(index) {
 				const imgSelect = $(`#backgroundImg${index}`);
 				const images = main.modes.backgrounds.imageOptions;
+				const imageOptGroups = images.map(image => image.optgroup);
+				const uniqueOptGroups = [...new Set(imageOptGroups)];
+				let selects;
 
 				// Populate select box with images
-				for (const image of images) {
-					const imageName = image.filename.split('.')[0];
-					imgSelect.append(`
-						<option
-							data-width="${image.width}"
-							data-height="${image.height}"
-							value="${image.filename}"
-						>${imageName}</option>
-					`);
+				for (const optGroup of uniqueOptGroups) {
+					const optGroupDefaultLabel = optGroup.length === 0 ? 'OTHER' : optGroup;
+					selects += `<optgroup label="${optGroupDefaultLabel}">`;
+					
+					for (const image of images) {
+						if (image.optgroup === optGroup) {
+							const imageName = image.filename.split('.')[0];
+							const optionText = `${imageName} - ${image.width}x${image.height}`;
+							selects += `
+								<option
+									title="${optionText}"
+									alt="${optionText}"
+									data-width="${image.width}"
+									data-height="${image.height}"
+									value="${image.filename}"
+								>${optionText}</option>
+							`;
+						}
+					}
+
+					selects += `</optgroup>`;
+
 				}
+
+				imgSelect.append(selects);
 
 				// trigger a change event
 				imgSelect.trigger('change');
@@ -1217,8 +1322,6 @@ const main = {
 				const selectedWidth = selected.data('width');
 				const selectedHeight = selected.data('height');
 				const imagePath = `images/backgrounds/${selectedVal}`;
-				const toolWidthField = $('#backgroundWidth');
-				const toolHeightField = $('#backgroundHeight');
 
 				// Find the index we're changing
 				const selectIndex = +thisImageEl.data('index');
@@ -1239,25 +1342,14 @@ const main = {
 					);
 				}
 
-				/*
-				main.modes.resetCanvas(0);
-
-				// Only resize the canvas on the first image
-				if (selectIndex === 0) {
-					main.modes.backgrounds.setBackgroundSize(selectedWidth, selectedHeight);
-					toolWidthField.val(selectedWidth);
-					toolHeightField.val(selectedHeight);
-				}
-				*/
-
 				main.modes.properties.showBackground = true;
 
 				thisImageEl.trigger('blur');
 
-				main.toggleLoading(true);
+				main.loading.toggle(true);
 				setTimeout(() => {
 					main.draw();
-					main.toggleLoading(false);
+					main.loading.toggle(false);
 				}, 1000);
 			},
 			onBackgroundSizeChange() {
@@ -1270,17 +1362,12 @@ const main = {
 				const viewportWidthVal = viewportWidthEl.val();
 				const viewportHeightVal = viewportHeightEl.val();
 
+				main.loading.toggle(true);
+				
 				main.modes.backgrounds.setBackgroundSize(
 					new Vector2(worldWidthVal, worldHeightVal),
 					new Vector2(viewportWidthVal, viewportHeightVal)
 				);
-				
-				main.toggleLoading(true);
-				setTimeout(() => {
-					main.draw();
-					main.toggleLoading(false);
-				}, 1000);
-
 			},
 			onAddLayer() {
 				const bgImageDiv = $('#backgroundLayers');
@@ -1366,6 +1453,12 @@ const main = {
 					}
 
 					thisPropertiesBox.remove();
+					
+					main.loading.toggle(true);
+					setTimeout(() => {
+						main.draw();
+						main.loading.toggle(false);
+					}, 1000);
 				}
 			},
 			setBackgroundSize(worldSize, viewportSize) {
@@ -1379,12 +1472,22 @@ const main = {
 				main.canvas.width = main.CANVAS_WIDTH;
 				main.canvas.height = main.CANVAS_HEIGHT;
 
+				// Refresh background sprites
+				for (const sprite of main.modes.backgrounds.sprites) {
+					sprite.refreshRepeatingSprites();
+				}
+
 				// Update info sectoin
 				$('#viewportSize').text(`${viewportSize.x}x, ${viewportSize.y}y`);
 				$('#worldSize').text(`${worldSize.x}x, ${worldSize.y}y`);
 
-				// Update camera
-				main.camera.camera.updateViewport();
+				main.loading.toggle(true);
+				setTimeout(() => {
+					// Update camera
+					main.camera.camera.updateViewport();
+					main.draw();
+					main.loading.toggle(false);
+				}, 1500);
 			},
 			parallax(cameraPosition) {
 				for (const background of main.modes.backgrounds.sprites) {
@@ -1398,13 +1501,11 @@ const main = {
 			}
 		},
 		checkRectIntersect(rect1, rect2) {
-
 			const intersectionDepth = rect1.GetIntersectionDepth(rect2);
 			const absDepthX = Math.abs(intersectionDepth.x);
 			const absDepthY = Math.abs(intersectionDepth.y);
 
 			return (absDepthY < absDepthX || absDepthX < absDepthY);
-
 		},
 		onBtnClick() {
 			const thisMode = $(this);
@@ -1417,14 +1518,12 @@ const main = {
 			}
 		},
 		set(mode) {
-
 			// SET NEW MODE			
 			main.modes.active = mode;
 			$(`#${mode}`).addClass('active').show();
 
 			// SHOW SECTION
 			$(`#${mode}Section`).slideDown();
-
 		},
 		reset() {
 			// RESET ALL BTNS
@@ -1448,12 +1547,32 @@ const main = {
 			main.modes.entities.npc = [];
 			main.modes.collisions.events.exit = undefined;
 			main.modes.collisions.events.eventArr = [];
+			$('#introText').val('').trigger('blur');
+			main.modes.backgrounds.setBackgroundSize(
+				new Vector2(main.initialWorldWidth, main.initialWorldHeight),
+				new Vector2(main.initialViewportWidth, main.initialViewportHeight)
+			);
 
 			if (shouldResetBackgrounds) {
+
+				// Delete all background elements except the first
+				for (let i = 1; i < main.modes.backgrounds.sprites.length; i++) {
+					$(`#backgroundImg${i}`).parent('.row').remove();
+				}
+
+				// Set first select box back to initial state
+				$('#backgroundImg0').val(-1);
+
+				// Clear backgroud sprite array
 				main.modes.backgrounds.sprites = [];
+
 			}
 
-			main.draw();
+			main.loading.toggle(true);
+			setTimeout(() => {
+				main.loading.toggle(false);
+				main.draw();
+			}, 1000);
 		},
 	},
 	toggleToolBox() {
@@ -1627,11 +1746,11 @@ const main = {
 				}
 
 				// Update canvas (including BG loading hack!)
-				main.toggleLoading(true);
+				main.loading.toggle(true);
 				setTimeout(() => {
 					main.draw();
-					main.toggleLoading(false);
-				}, 2000);
+					main.loading.toggle(false);
+				}, 3000);
 
 				// Close dialog
 				main.finalization.dialog.close();
@@ -1866,14 +1985,28 @@ const main = {
 			}
 		}
 	},
-	toggleLoading(show = false) {
-		const loadingOverlay = $('#loadingOverlay');
-		loadingOverlay.css({ width: main.CANVAS_WIDTH + 12, height: main.CANVAS_HEIGHT + 3 });
-		
-		if (show) {
-			loadingOverlay.fadeIn();
-		} else {
-			loadingOverlay.fadeOut();
+	loading: {
+		gifs: [
+			{ path: 'images/loading_plain.gif', bgColor: '#000000' },
+			{ path: 'images/loading_8bit.gif', bgColor: '#040204' },
+			{ path: 'images/loading_swordfight.gif', bgColor: '#000000' },
+			{ path: 'images/loading_string.gif', bgColor: '#000000' },
+			{ path: 'images/loading_scifi.gif', bgColor: '#0c0c0c' }
+		],
+		toggle(show = false) {
+			const loadingOverlay = $('#loadingOverlay');
+			const loadingImg = $('#loadingGif');
+			const randomGif = main.loading.gifs[random(0, main.loading.gifs.length - 1)];
+			
+			if (show) {
+				loadingOverlay.css("background-color", randomGif.bgColor);
+
+				loadingImg.attr('src', randomGif.path);
+
+				loadingOverlay.fadeIn();
+			} else {
+				loadingOverlay.fadeOut();
+			}
 		}
 	},
 	draw() {
@@ -1881,12 +2014,14 @@ const main = {
 
 		main.camera.camera.begin();
 		
+		/* BACKGROUNDS */
 		if (main.modes.backgrounds.sprites.length > 0 && main.modes.properties.showBackground) {
 			for (const sprite of main.modes.backgrounds.sprites) {
 				sprite.draw();
 			}
 		}
 
+		/* LINES */
 		if (main.modes.properties.showLines) {
 			for (const line of main.modes.collisions.lines.lineArr) {
 				line.draw();
