@@ -225,6 +225,10 @@ class Sprite {
 	updatePos(pos) {
 		this.pos = pos;
 	}
+
+	updateSize(size) {
+		this.size = size;
+	}
 	
 	draw() {
 		main.context.drawImage(this.img, this.pos.x, this.pos.y);
@@ -246,7 +250,7 @@ class Background {
 	}
 
 	getFilename() {
-		return super.getFilename();
+		return this.sprites[0].getFilename();
 	}
 
 	getParallax() {
@@ -268,6 +272,19 @@ class Background {
 				new Vector2(
 					pos.x + (i * this.size.x),
 					pos.y
+				)
+			);
+		}
+	}
+
+	updateSize(size) {
+		this.size = new Vector2(size.x, size.y);
+
+		for (let i = 0; i < this.sprites.length; i++) {
+			this.sprites[i].updateSize(
+				new Vector2(
+					size.x,
+					size.y
 				)
 			);
 		}
@@ -1206,8 +1223,15 @@ const main = {
 				{ filename: 'BG1.png', optgroup: 'JUNGLE', layer: 1, width: 8064, height: 648, },
 				{ filename: 'BG2.png', optgroup: 'JUNGLE', layer: 2, width: 8064, height: 648, },
 				{ filename: 'BG3.png', optgroup: 'JUNGLE', layer: 3, width: 8064, height: 648, },
-				{ filename: 'BG4.png', optgroup: 'JUNGLE', layer: 4, width: 8064, height: 648, },
+				{ filename: 'BG4.png', optgroup: 'JUNGLE', layer: 4, width: 8064, height: 648, },				
+				{ filename: 'FOREST_BACKGROUND.png', optgroup: 'FOREST', layer: 0, width: 4000, height: 648, },
+				{ filename: 'FOREST_TREES_1.png', optgroup: 'FOREST', layer: 1, width: 4000, height: 648, },
+				{ filename: 'FOREST_TREES_2.png', optgroup: 'FOREST', layer: 2, width: 4000, height: 648, },
+				{ filename: 'FOREST_TREES_3.png', optgroup: 'FOREST', layer: 3, width: 4000, height: 648, },
+				{ filename: 'FOREST_TREES_4.png', optgroup: 'FOREST', layer: 4, width: 4000, height: 648, },
+				{ filename: 'FOREST_FOREGROUND.png', optgroup: 'FOREST', layer: 5, width: 4000, height: 648, },
 				{ filename: 'Blockland-BG-0.png', optgroup: 'BLOCKLAND', layer: 0, width: 6000, height: 648, },
+				{ filename: 'Blockland-BG-0-2.png', optgroup: 'BLOCKLAND', layer: 0, width: 1000, height: 648, },
 				{ filename: 'Blockland-BG-1.png', optgroup: 'BLOCKLAND', layer: 1, width: 6000, height: 648, },
 				{ filename: 'Blockland-BG-2.png', optgroup: 'BLOCKLAND', layer: 2, width: 6000, height: 648, },
 				{ filename: 'Blockland-BG-3.png', optgroup: 'BLOCKLAND', layer: 3, width: 6000, height: 648, },
@@ -1330,6 +1354,7 @@ const main = {
 				// If that index already exists, then we're updating. Otherwise we're creating new
 				if (main.modes.backgrounds.sprites[selectIndex]) {
 					main.modes.backgrounds.sprites[selectIndex].updateImage(imagePath);
+					main.modes.backgrounds.sprites[selectIndex].updateSize(new Vector2(selectedWidth, selectedHeight));
 				} else {
 					main.modes.backgrounds.sprites.push(
 						new Background(
@@ -1361,8 +1386,6 @@ const main = {
 				const worldHeightVal = worldHeightEl.val();
 				const viewportWidthVal = viewportWidthEl.val();
 				const viewportHeightVal = viewportHeightEl.val();
-
-				main.loading.toggle(true);
 				
 				main.modes.backgrounds.setBackgroundSize(
 					new Vector2(worldWidthVal, worldHeightVal),
@@ -1831,9 +1854,9 @@ const main = {
 						output.backgrounds.push(
 							{
 								path: `./images/backgrounds/${bg.getFilename()}`,
-								pos: [-200, 0],
-								size: [0, 0],
-								isRepeating: false,
+								pos: [0, 0],
+								size: [bg.size.x, bg.size.y],
+								isRepeating: bg.getRepeat(),
 								parallax: [bg.getParallax().x, bg.getParallax().y]
 							}
 						);
@@ -2003,7 +2026,7 @@ const main = {
 
 				loadingImg.attr('src', randomGif.path);
 
-				loadingOverlay.fadeIn();
+				loadingOverlay.show();
 			} else {
 				loadingOverlay.fadeOut();
 			}
