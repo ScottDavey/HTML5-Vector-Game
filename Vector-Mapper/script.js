@@ -130,41 +130,50 @@ class Texture {
 *****  ENTITY CLASS  *****
 *************************/
 
-class Entity {
-	constructor(pos, size, fillColor, lineWidth, lineColor) {
-		this.pos = pos;
+class Character {
+	constructor(position, size, type) {
+		this.position = position;
 		this.size = size;
-		this.fillColor = fillColor;
-		this.lineColor = lineColor;
-		this.lineWidth = lineWidth;
-		this.rect = new Texture(new Vector2(pos.x, pos.y), new Vector2(size.x, size.y), this.fillColor, this.lineWidth, this.lineColor);
+		this.type = type;
+		this.path = this.getPathByType();
+		this.sprite = new Sprite(this.path, this.position, this.size);
+	}
+
+	getPathByType() {
+		let path;
+
+		switch (this.type) {
+			case 'player':
+				path = 'images/entities/HoneyBear.png';
+				break;
+			case 'bear':
+				path = 'images/entities/Bear.png';
+				break;
+			case 'boss':
+				path = 'images/entities/Boss.png';
+				break;
+			case 'beeHive':
+				path = 'images/entities/BeeHive.png';
+				break;
+			default:
+				break;
+		}
+
+		return path;
+	}
+
+	updatePos(pos) {
+		this.position = pos;
+		this.sprite.updatePos(this.position);
+	}
+
+	updateSize(size) {
+		this.size = size;
+		this.sprite.updateSize(size);
 	}
 
 	draw() {
-		this.rect.draw();
-	}
-}
-
-class Player extends Entity {
-
-	constructor(pos, size, fillColor, lineWidth, lineColor) {
-		super(pos, size, fillColor, lineWidth, lineColor);
-	}
-
-	draw() {
-		super.draw();
-	}
-}
-
-class NPC extends Entity {
-
-	constructor(pos, size, fillColor, lineWidth, lineColor, region = new Rectangle(0, 0, 0, 0)) {
-		super(pos, size, fillColor, lineWidth, lineColor);
-		this.region = region;
-	}
-
-	draw() {
-		super.draw();
+		this.sprite.draw();
 	}
 }
 
@@ -429,9 +438,6 @@ const main = {
 		this.canvas.height = this.CANVAS_HEIGHT;
 		this.context = this.canvas.getContext('2d');
 		this.isToolBoxShowing = true;
-
-		// this.grid = [];
-		// this.gridSize = 500;
 		
 		// Initialize
 		main.input.init();
@@ -623,10 +629,13 @@ const main = {
 			init() {
 				$('#propertiesSection .checkboxes').on('change', main.modes.properties.onChange);
 				const introText = $('#introText');
-				introText.on('focus', main.modes.properties.onIntroTextFocus);
-				introText
-					.on('blur', main.modes.properties.onIntroTextBlur)
-					.trigger('blur');
+				const levelName = $('#levelName');
+				const { onFocus, onBlur } = main.modes.properties.fields;
+
+				introText.on('focus', onFocus);
+				introText.on('blur', onBlur).trigger('blur');
+				levelName.on('focus', onFocus);
+				levelName.on('blur', onBlur).trigger('blur');
 			},
 			onChange() {
 				const that = $(this);
@@ -646,29 +655,38 @@ const main = {
 
 				main.draw();
 			},
-			onIntroTextFocus() {
-				const introTextEl = $(this);
-				const val = introTextEl.val().replace('\n\n', '').trim();
+			fields: {
+				onFocus() {
+					const fieldEl = $(this);
+					const val = fieldEl.val().replace('\n\n', '').trim();
+					const defaultText = fieldEl.data('defaulttext');
 
-				if (val === 'INTRO TEXT') {
-					introTextEl.val('');
-					introTextEl.css({ color: '#222222', 'text-align': 'left' } );
-				}
-			},
-			onIntroTextBlur() {
-				const introTextEl = $(this);
-				const val = introTextEl.val();
+					if (val === defaultText) {
+						fieldEl.val('');
+						fieldEl.css({ color: '#222222', 'text-align': 'left' } );
+					}
+				},
+				onBlur() {
+					const fieldEl = $(this);
+					const val = fieldEl.val();
+					const defaultText = fieldEl.data('defaulttext');
 
-				if (val.length === 0) {
-					introTextEl.val('\n\nINTRO TEXT');
-					introTextEl.css({ color: '#BBBBBB', 'text-align': 'center' } );
+					if (val.length === 0) {
+						const fieldType = fieldEl.attr('id');
+						const fieldVal = fieldType === 'introText' ? `\n${defaultText}` : defaultText;
+
+						fieldEl.val(fieldVal);
+						fieldEl.css({ color: '#BBBBBB', 'text-align': 'center' } );
+					}
 				}
 			}
 		},
 		entities: {
 			entityGuide: undefined,
 			player: undefined,
-			npc: [],
+			boss: undefined,
+			bears: [],
+			beeHives: [],
 			init() {
 				$('#entityType').on('change', main.modes.entities.onGuideChange);
 				$('.entitySize')
@@ -680,17 +698,8 @@ const main = {
 				const height = $('#entityHeight').val();
 				const entitySize = new Vector2(width, height);
 				const entityType = $('#entityType').val();
-				const entityColor = (entityType === 'player') ? '#FFFFFF' : '#0088FF';
-				const entityFilleColor = `${entityColor}66`
-				const entity = main.modes.entities.entityGuide;
 
-				if (!entity) {
-					main.modes.entities.entityGuide = new Texture(new Vector2(0, 0), entitySize, entityFilleColor, 1, entityColor);
-				}
-
-				main.modes.entities.entityGuide = new Texture(new Vector2(0, 0), entitySize, entityFilleColor, 1, entityColor);
-				main.modes.entities.entityGuide.updateColor(entityFilleColor, entityColor);
-				main.modes.entities.entityGuide.updateSize(entitySize);
+				main.modes.entities.entityGuide = new Character(new Vector2(0, 0), entitySize, entityType);
 			},
 			action(mousePos) {
 				if (main.input.isCtrlDown) {
@@ -704,30 +713,27 @@ const main = {
 				const width = $('#entityWidth').val();
 				const height = $('#entityHeight').val();
 
-				if (entityType === 'player') {
+				const character = new Character(
+					new Vector2(mousePos.x, mousePos.y),
+					new Vector2(width, height),
+					entityType
+				);
 
-					main.modes.entities.player = undefined;
-
-					main.modes.entities.player = new Player(
-						new Vector2(mousePos.x, mousePos.y),
-						new Vector2(width, height),
-						'#FFFFFF66',
-						1,
-						'#FFFFFF'
-					);
-
-				} else if (entityType === 'npc') {
-
-					main.modes.entities.npc.push(
-						new NPC(
-							new Vector2(mousePos.x, mousePos.y),
-							new Vector2(width, height),
-							'#0088FF66',
-							1,
-							'#0088FF'
-						)
-					);
-
+				switch(entityType) {
+					case 'player':
+						main.modes.entities.player = character;
+						break;
+					case 'bear':
+						main.modes.entities.bears.push(character);
+						break;
+					case 'boss':
+						main.modes.entities.boss = character;
+						break;
+					case 'beeHive':
+						main.modes.entities.beeHives.push(character);
+						break;
+					default:
+						break;
 				}
 
 				main.draw();
@@ -737,10 +743,11 @@ const main = {
 				const pointerRect = new Rectangle(mousePos.x - 2, mousePos.y - 2, 4, 4);
 
 				const player = main.modes.entities.player;
+				const boss = main.modes.entities.boss;
 				
 				// Erase player
 				if (player) {
-					const playerRect = new Rectangle(player.pos.x, player.pos.y, player.size.x, player.size.y);
+					const playerRect = new Rectangle(player.position.x, player.position.y, player.size.x, player.size.y);
 
 					// If the pointer is intersecting with the player, remove it
 					if (main.modes.checkRectIntersect(pointerRect, playerRect)) {
@@ -749,15 +756,38 @@ const main = {
 
 				}
 
-				// Erase NPC
-				for (let i = 0; i < main.modes.entities.npc.length; i++) {
+				if (boss) {
+					const bossRect = new Rectangle(boss.position.x, boss.position.y, boss.size.x, boss.size.y);
 
-					const npc = main.modes.entities.npc[i];
-					const npcRect = new Rectangle(npc.pos.x, npc.pos.y, npc.size.x, npc.size.y);
+					// If the pointer is intersecting with the boss, remove it
+					if (main.modes.checkRectIntersect(pointerRect, bossRect)) {
+						main.modes.entities.boss = undefined;
+					}
+				}
 
-					// If the pointer is intersecting with an NPC, remove it
-					if (main.modes.checkRectIntersect(pointerRect, npcRect)) {
-						main.modes.entities.npc.splice(i, 1);
+				// Erase Bears
+				for (let i = 0; i < main.modes.entities.bears.length; i++) {
+
+					const bear = main.modes.entities.bears[i];
+					const bearRect = new Rectangle(bear.position.x, bear.position.y, bear.size.x, bear.size.y);
+
+					// If the pointer is intersecting with a bear, remove it
+					if (main.modes.checkRectIntersect(pointerRect, bearRect)) {
+						main.modes.entities.bears.splice(i, 1);
+						break;
+					}
+
+				}
+				
+				// Erase Bee Hives
+				for (let i = 0; i < main.modes.entities.beeHives.length; i++) {
+
+					const hive = main.modes.entities.beeHives[i];
+					const hiveRect = new Rectangle(hive.position.x, hive.position.y, hive.size.x, hive.size.y);
+
+					// If the pointer is intersecting with a bee hive, remove it
+					if (main.modes.checkRectIntersect(pointerRect, hiveRect)) {
+						main.modes.entities.beeHives.splice(i, 1);
 						break;
 					}
 
@@ -1567,7 +1597,8 @@ const main = {
 			main.modes.collisions.currentLine = undefined;
 			main.modes.collisions.events.eventArr = [];
 			main.modes.entities.player = undefined;
-			main.modes.entities.npc = [];
+			main.modes.entities.bears = [];
+			main.modes.entities.beeHives = [];
 			main.modes.collisions.events.exit = undefined;
 			main.modes.collisions.events.eventArr = [];
 			$('#introText').val('').trigger('blur');
@@ -1656,30 +1687,55 @@ const main = {
 				introTextEl.trigger('focus');
 				introTextEl.val(input.introText);
 
+				// Level Name
+				const levelNameEl = $('#levelName');
+				levelNameEl.trigger('focus');
+				levelNameEl.val(input.levelName);
+
 				// Player
 				main.modes.entities.player = undefined;
 
-				main.modes.entities.player = new Player(
+				main.modes.entities.player = new Character(
 					new Vector2(input.player.start[0], input.player.start[1]),
 					new Vector2(input.player.size[0], input.player.size[1]),
-					'#FFFFFF66',
-					1,
-					'#FFFFFF'
+					'player'
 				);
 
-				// NPCs
-				main.modes.entities.npc = [];
+				// Boss
+				main.modes.entities.boss = undefined;
 
-				for (const npc of input.enemies) {
-					main.modes.entities.npc.push(
-						new NPC(
-							new Vector2(npc.start[0], npc.start[1]),
-							new Vector2(npc.size[0], npc.size[1]),
-							'#0088FF66',
-							1,
-							'#0088FF'
+				main.modes.entities.boss = new Character(
+					new Vector2(input.boss.start[0], input.boss.start[1]),
+					new Vector2(input.boss.size[0], input.boss.size[1]),
+					'boss'
+				);
+
+				// Bears
+				main.modes.entities.bears = [];
+
+				for (const bear of input.bears) {
+					main.modes.entities.bears.push(
+						new Character(
+							new Vector2(bear.start[0], bear.start[1]),
+							new Vector2(bear.size[0], bear.size[1]),
+							'bear'
 						)
 					);
+				}
+
+				// Bee Hives
+				main.modes.entities.beeHives = [];
+
+				if (input.beeHives) {
+					for (const hive of input.beeHives) {
+						main.modes.entities.beeHives.push(
+							new Character(
+								new Vector2(hive.start[0], hive.start[1]),
+								new Vector2(hive.size[0], hive.size[1]),
+								'beeHive'
+							)
+						);
+					}
 				}
 
 				// Background - Load Canvas
@@ -1807,17 +1863,26 @@ const main = {
 
 				// Intro text
 				const introText = $('#introText').val();
-				if ((introText.replace('\n\n', '').trim() !== 'INTRO TEXT')) {
+				if ((introText.replace('\n\n', '').trim().toLowerCase() !== 'intro text')) {
 					output.introText = introText;
 				} else {
 					output.introText = 'Somebody forgot to add intro text...';
 					errors.push('<span class="keyword">INTRO TEXT</span> missing');
 				}
 
+				// Level Name
+				const levelName = $('#levelName').val();
+				if ((levelName.toLowerCase() !== 'level name')) {
+					output.levelName = levelName;
+				} else {
+					output.levelName = 'No Name';
+					errors.push('<span class="keyword">LEVEL NAME</span> missing');
+				}
+
 				// PLAYER
 				if (main.modes.entities.player) {
 					output.player = {
-						start: [+main.modes.entities.player.pos.x, +main.modes.entities.player.pos.y],
+						start: [+main.modes.entities.player.position.x, +main.modes.entities.player.position.y],
 						size: [+main.modes.entities.player.size.x, +main.modes.entities.player.size.y]
 					}
 				} else {
@@ -1825,15 +1890,27 @@ const main = {
 					errors.push('<span class="keyword">PLAYER</span> missing');
 				}
 
-				// NPCs
-				output.enemies = [];
+				// BOSS
+				if (main.modes.entities.boss) {
+					output.boss = {
+						name: 'Tree Monster',
+						start: [+main.modes.entities.boss.position.x, +main.modes.entities.boss.position.y],
+						size: [+main.modes.entities.boss.size.x, +main.modes.entities.boss.size.y]
+					}
+				} else {
+					output.boss = {};
+					errors.push('<span class="keyword">BOSS</span> missing');
+				}
 
-				if (main.modes.entities.npc.length > 0) {
-					for (const npc of main.modes.entities.npc) {
-						output.enemies.push(
+				// Bears
+				output.bears = [];
+
+				if (main.modes.entities.bears.length > 0) {
+					for (const bear of main.modes.entities.bears) {
+						output.bears.push(
 							{
-								start: [+npc.pos.x, +npc.pos.y],
-								size: [+npc.size.x, +npc.size.y],
+								start: [+bear.position.x, +bear.position.y],
+								size: [+bear.size.x, +bear.size.y],
 								region: {
 									pos: [0, 0],
 									size: [9000, 9000],
@@ -1842,9 +1919,28 @@ const main = {
 						);
 					}
 				} else {
-					errors.push('<span class="keyword">NPCs</span> missing');
+					errors.push('<span class="keyword">Bears</span> missing');
 				}
-				
+
+				// Bee Hives
+				output.beeHives = [];
+
+				if (main.modes.entities.beeHives.length > 0) {
+					for (const hive of main.modes.entities.beeHives) {
+						output.beeHives.push(
+							{
+								start: [+hive.position.x, +hive.position.y],
+								size: [+hive.size.x, +hive.size.y],
+								region: {
+									pos: [0, 0],
+									size: [9000, 9000],
+								}
+							}
+						);
+					}
+				} else {
+					errors.push('<span class="keyword">Bee Hives</span> missing');
+				}
 
 				// Backgrounds
 				output.backgrounds = [];
@@ -1896,6 +1992,7 @@ const main = {
 							{
 								pos: [event.getPos().x, event.getPos().y],
 								size: [event.getSize().x, event.getSize().y],
+								name: event.name,
 							}
 						);
 					}
@@ -2082,14 +2179,24 @@ const main = {
 				main.modes.entities.entityGuide.draw();
 			}
 
-			// NPCs
-			for (const npc of main.modes.entities.npc) {
-				npc.draw();
+			// Bears
+			for (const bear of main.modes.entities.bears) {
+				bear.draw();
+			}
+			
+			// Bee Hives
+			for (const hive of main.modes.entities.beeHives) {
+				hive.draw();
 			}
 
 			// Player
 			if (main.modes.entities.player) {
 				main.modes.entities.player.draw();
+			}
+
+			// Boss
+			if (main.modes.entities.boss) {
+				main.modes.entities.boss.draw();
 			}
 
 		}

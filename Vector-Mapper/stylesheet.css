@@ -56,7 +56,7 @@ input[type=text], select { padding: 5px; }
 
 /* TOOLBOX */
 #toolBox { width: 380px; height: 100%; padding: 20px 0px; background-color: #171717; }
-#toolBox #header { margin-bottom: 10px; padding-left: 20px; }
+#toolBox #header { margin-bottom: 5px; padding-left: 20px; }
 #toolBox #header h1 { font-size:22pt; font-weight:normal; text-align:center; }
 #toolBox h3 { font:normal 20pt Lobster, "Century Gothic", Verdana, sans-serif; margin-bottom:10px; color:#C68A0D; }
 #toolBox h4 { font-size: 16pt; font-weight: normal; color: #f0e6d0; }
@@ -100,7 +100,9 @@ input[type=text], select { padding: 5px; }
 #toolBox #propertiesSection .propertiesRow { padding: 7px 0px; display: flex; justify-content: start; }
 #toolBox #propertiesSection .checkboxes { width: 20px; height: 20px; margin-right: 30px; border:1px solid #444444; }
 #toolBox #propertiesSection #lineSnapThreshold { width: 20px; margin-left: 16px; text-align: center; font-size: 10pt; }
-#toolBox #propertiesSection #introText { width: 265px; height: 100px; padding: 5px; margin-top: 10px; font-size: 14pt; color: #BBBBBB; }
+#toolBox #propertiesSection .propertiesField { width: 265px; padding: 5px; font: normal 10pt Monospace, Consolas, sans-serif; color: #BBBBBB; }
+#toolBox #propertiesSection #introText { height: 50px; margin-top: 5px; color: #BBBBBB; }
+/* #toolBox #propertiesSection #levelName {  } */
 
 /* BACKGROUND */
 #toolBox #backgroundSection #backgroundModeSection { display: flex; justify-content: space-between; margin-bottom: 20px; }
