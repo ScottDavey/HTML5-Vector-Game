@@ -3,7 +3,7 @@
 * { padding: 0; margin: 0; }
 html, body { height: 100%; background-color: #222222; font: normal 14pt Raleway, "Century Gothic", Verdana, Arial; color: #FFFFFF; overflow: hidden; }
 
-input[type=text], select { padding: 5px; }
+input[type=text], select { padding: 5px; border: 1px solid #444444; }
 .textboxes { padding:5px; background-color:#FFFFFF; border:1px solid #444444; }
 
 #wrapper { width: 100%; height: 100%; display: flex; justify-content:flex-start; }
@@ -54,6 +54,11 @@ input[type=text], select { padding: 5px; }
 .bump.right9  { left: 9px; }
 .bump.right10 { left:10px; }
 
+.border-radius.five { border-radius: 5px; }
+.border-radius.ten { border-radius: 10px; }
+.border-radius.fifteen { border-radius: 15px; }
+.border-radius.twenty { border-radius: 20px; }
+
 /* TOOLBOX */
 #toolBox { width: 380px; height: 100%; padding: 20px 0px; background-color: #171717; }
 #toolBox #header { margin-bottom: 5px; padding-left: 20px; }
@@ -75,19 +80,19 @@ input[type=text], select { padding: 5px; }
 #toolBox .section #viewBtnSection .viewBtn { width: 40px; height: 40px; margin: 0px 3px; border: 2px solid #000000; background-color: #FFFFFF; text-align: center; cursor: pointer; }
 
 #toolBox .section #viewBtnSection #properties { background-image: url('./images/icons/properties-BW.png'); }
-#toolBox .section #viewBtnSection #properties:hover,
+#toolBox .section #viewBtnSection #properties:hover { border-color: #EAA833; }
 #toolBox .section #viewBtnSection #properties.active { background-image: url('./images/icons/properties.png'); border-color: #EAA833; }
 
 #toolBox .section #viewBtnSection #entity { background-image: url('./images/icons/entities-BW.png'); }
-#toolBox .section #viewBtnSection #entity:hover,
+#toolBox .section #viewBtnSection #entity:hover { border-color: #EAA833; }
 #toolBox .section #viewBtnSection #entity.active { background-image: url('./images/icons/entities.png'); border-color: #EAA833; }
 
 #toolBox .section #viewBtnSection #collision { background-image: url('./images/icons/collision-BW.png'); }
-#toolBox .section #viewBtnSection #collision:hover,
+#toolBox .section #viewBtnSection #collision:hover { border-color: #EAA833; }
 #toolBox .section #viewBtnSection #collision.active { background-image: url('./images/icons/collision.png'); border-color: #EAA833; }
 
 #toolBox .section #viewBtnSection #background { background-image: url('./images/icons/background-BW.png'); }
-#toolBox .section #viewBtnSection #background:hover,
+#toolBox .section #viewBtnSection #background:hover { border-color: #EAA833; }
 #toolBox .section #viewBtnSection #background.active { background-image: url('./images/icons/background.png'); border-color: #EAA833; }
 
 /* ENTITIES */
@@ -98,11 +103,10 @@ input[type=text], select { padding: 5px; }
 /* PROPERTIES */
 
 #toolBox #propertiesSection .propertiesRow { padding: 7px 0px; display: flex; justify-content: start; }
-#toolBox #propertiesSection .checkboxes { width: 20px; height: 20px; margin-right: 30px; border:1px solid #444444; }
+#toolBox #propertiesSection .checkboxes { width: 20px; height: 20px; margin-right: 30px; }
 #toolBox #propertiesSection #lineSnapThreshold { width: 20px; margin-left: 16px; text-align: center; font-size: 10pt; }
 #toolBox #propertiesSection .propertiesField { width: 265px; padding: 5px; font: normal 10pt Monospace, Consolas, sans-serif; color: #BBBBBB; }
 #toolBox #propertiesSection #introText { height: 50px; margin-top: 5px; color: #BBBBBB; }
-/* #toolBox #propertiesSection #levelName {  } */
 
 /* BACKGROUND */
 #toolBox #backgroundSection #backgroundModeSection { display: flex; justify-content: space-between; margin-bottom: 20px; }
@@ -114,8 +118,8 @@ input[type=text], select { padding: 5px; }
 #toolBox #backgroundSection #backgroundSizeSection { display: none; }
 #toolBox #backgroundSection #backgroundSizeSection .subSection { margin-bottom: 15px; display: flex; justify-content: space-between; }
 #toolBox #backgroundSection #backgroundSizeSection label { width: 85px; }
-#toolBox #backgroundSection #backgroundSizeSection p { width:20px; height: 18px; margin-top: 1px; padding: 5px 0px; background-color: #CCCCCC; color: #222222; text-align: center; font-size: 10pt; }
-#toolBox #backgroundSection #backgroundSizeSection .backgroundSize { width: 50px; }
+#toolBox #backgroundSection #backgroundSizeSection p { width:20px; height: 18px; margin-top: 1px; padding: 5px 0px; background-color: #CCCCCC; color: #222222; text-align: center; font-size: 10pt; border-radius: 5px 0px 0px 5px; }
+#toolBox #backgroundSection #backgroundSizeSection .backgroundSize { width: 50px; border-radius: 0px 5px 5px 0px; }
 #toolBox #backgroundSection #backgroundSizeSection #backgroundApplyBtn { width: 100%; margin-top: 5px; padding: 6px 0; border:1px solid #000000; text-align: center; cursor: pointer; background-color: #43d2ba; color: #000000; }
 
 /* BACKGROUND - Image Section */
@@ -181,6 +185,7 @@ input[type=text], select { padding: 5px; }
 #dialog #dialogContent #copy:hover { background-color: #888888; color: #000000; }
 #dialog #dialogContent #dialogTextarea { width: 100%; height: 100%; padding:7px 5px; box-sizing: border-box; font: 12pt normal "Fira Code", "Century Gothic", Verdana; }
 #dialog #dialogFooter { width: 100%; height:47px; background-color:#333333; border-radius:0 0 8px 8px; box-sizing: border-box; display: flex; justify-content: right; }
+#dialog #dialogFooter #dialogCharCount { padding: 11px 0px; margin-right: 50px; color: #777777; }
 #dialog #dialogFooter .button { width: 100px; margin-left: 2px; padding: 11px 0px; color: #111111; text-align: center; cursor: pointer; }
 #dialog #dialogFooter .button.save { background-color:#F11B2B; display: none; }
 #dialog #dialogFooter .button.close { background-color:#CCCCCC; border-radius:0 0 6px 0; }
@@ -190,6 +195,6 @@ input[type=text], select { padding: 5px; }
 
 #wrapper #loadingOverlay { width: 100%; height: 100%; background-color: #00000088; display: flex; align-items: center; justify-content: center; position: absolute; top: 0; left: 0px; }
 #wrapper #content { width: 100%; height: 100%; position: relative; z-index: 1; }
-#wrapper #content #canvas { border: 1px solid #111111; background-color: #111111; }
+#wrapper #content #canvas { border: 1px solid #111111; background-color: #111111; border-bottom-right-radius: 10px; }
 #content #canvas.move { cursor:move; }
 #content #canvas.erase { cursor:no-drop; }

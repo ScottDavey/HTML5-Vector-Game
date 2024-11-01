@@ -131,49 +131,66 @@ class Texture {
 *************************/
 
 class Character {
-	constructor(position, size, type) {
+	constructor(position, size, name, type, path) {
 		this.position = position;
 		this.size = size;
+		this.name = name;
 		this.type = type;
-		this.path = this.getPathByType();
+		this.path = path || this.getPathByName();
 		this.sprite = new Sprite(this.path, this.position, this.size);
+		this.bounds = new Texture(this.position, this.size, 'transparent', 1, '#FFFFFF66');
 	}
 
-	getPathByType() {
+	getPathByName() {
 		let path;
 
-		switch (this.type) {
-			case 'player':
+		switch (this.name) {
+			case 'Player':
 				path = 'images/entities/HoneyBear.png';
 				break;
-			case 'bear':
+			case 'Bear':
 				path = 'images/entities/Bear.png';
 				break;
-			case 'boss':
-				path = 'images/entities/Boss.png';
+			case 'Tree Monster':
+				path = 'images/entities/TreeMonster.png';
 				break;
-			case 'beeHive':
+			case 'Bee Hive':
 				path = 'images/entities/BeeHive.png';
+				break;
+			case 'Cave Front':
+				path = 'images/entities/Forest-Cave-Front.png';
+				break;
+			case 'Log Front':
+				path = 'images/entities/Forest-Log-Front.png';
 				break;
 			default:
 				break;
 		}
 
 		return path;
+
+	}
+
+	getSize() {
+		return new Vector2(this.size.x, this.size.y);
 	}
 
 	updatePos(pos) {
 		this.position = pos;
 		this.sprite.updatePos(this.position);
+		this.bounds.updatePos(this.position);
 	}
 
 	updateSize(size) {
 		this.size = size;
 		this.sprite.updateSize(size);
+		this.bounds.updateSize(size);
+
 	}
 
 	draw() {
 		this.sprite.draw();
+		this.bounds.draw();
 	}
 }
 
@@ -468,6 +485,7 @@ const main = {
 			main.input.previousMousePos = new Vector2(0, 0);
 			main.canvas.addEventListener('mousedown', e => main.input.onMouseDown(e), false);
 			document.getElementById('content').addEventListener('mousemove', e => main.input.onMouseMove(e), false);
+			document.getElementById('dialogTextarea').addEventListener('keyup', e => main.input.onDialogKeyup(), false);
 			document.addEventListener('mouseup', e => main.input.onMouseUp(e), false);
 			document.addEventListener('keydown', e => main.input.onKeyDown(e), false);
 			document.addEventListener('keyup', e => main.input.onKeyUp(e), false);
@@ -508,8 +526,10 @@ const main = {
 			$('#mouseX').text(main.input.currentMousePos.x);
 			$('#mouseY').text(main.input.currentMousePos.y);
 
+			// For entities, because they can be larger than the world, set the mouse in the middle
 			if (main.modes.active === 'entity' && main.modes.entities.entityGuide) {
-				main.modes.entities.entityGuide.updatePos(new Vector2(main.input.currentMousePos.x, main.input.currentMousePos.y));
+				const entityGuideSize = main.modes.entities.entityGuide.getSize();
+				main.modes.entities.entityGuide.updatePos(new Vector2(main.input.currentMousePos.x - (entityGuideSize.x / 2), main.input.currentMousePos.y - (entityGuideSize.y / 2)));
 				main.draw();
 			}
 
@@ -569,6 +589,13 @@ const main = {
 				main.input.isShiftDown = false;
 			}
 
+		},
+		onDialogKeyup() {
+			const dialogTextarea = $('#dialogTextarea');
+			const charCount = dialogTextarea.val().length || 0;
+			const dialogCharCountSpan = $('#dialogCharCount span#count');
+
+			dialogCharCountSpan.text(charCount.toLocaleString());
 		}
 	},
 	camera: {
@@ -687,6 +714,7 @@ const main = {
 			boss: undefined,
 			bears: [],
 			beeHives: [],
+			environmental: [],
 			init() {
 				$('#entityType').on('change', main.modes.entities.onGuideChange);
 				$('.entitySize')
@@ -694,12 +722,19 @@ const main = {
 					.trigger('blur');
 			},
 			onGuideChange() {
-				const width = $('#entityWidth').val();
-				const height = $('#entityHeight').val();
+				const entityEl = $('#entityType');
+				const selectedEntity = entityEl.find('option:selected'); 
+				const entityName = entityEl.val();
+				const entityType = selectedEntity.attr('type');
+				const path = selectedEntity.attr('path');
+				const width = selectedEntity.attr('width');
+				const height = selectedEntity.attr('height');
 				const entitySize = new Vector2(width, height);
-				const entityType = $('#entityType').val();
+				
+				$('#entityWidth').val(width);
+				$('#entityHeight').val(height);
 
-				main.modes.entities.entityGuide = new Character(new Vector2(0, 0), entitySize, entityType);
+				main.modes.entities.entityGuide = new Character(new Vector2(0, 0), entitySize, entityName, entityType, path);
 			},
 			action(mousePos) {
 				if (main.input.isCtrlDown) {
@@ -709,28 +744,45 @@ const main = {
 				}
 			},
 			add(mousePos) {
-				const entityType = $('#entityType').val();
+				const entityTypeEl = $('#entityType');
+				const selectedOption = entityTypeEl.find('option:selected');
+				const entityTypeName = entityTypeEl.val();
+				const entityType = selectedOption.attr('type');
 				const width = $('#entityWidth').val();
 				const height = $('#entityHeight').val();
+				const entityGuideSize = main.modes.entities.entityGuide.getSize();
+				const charPosition = new Vector2(
+					mousePos.x - (entityGuideSize.x / 2),
+					mousePos.y - (entityGuideSize.y / 2)
+				);
+				const path = selectedOption.attr('path');
 
 				const character = new Character(
-					new Vector2(mousePos.x, mousePos.y),
+					charPosition,
 					new Vector2(width, height),
-					entityType
+					entityTypeName,
+					entityType,
+					path
 				);
 
 				switch(entityType) {
-					case 'player':
-						main.modes.entities.player = character;
-						break;
-					case 'bear':
-						main.modes.entities.bears.push(character);
+					case 'character':
+						if (entityTypeName === 'Bear') {
+							main.modes.entities.bears.push(character);
+						} else {
+							// for now, assume player as default
+							main.modes.entities.player = character;
+						}
 						break;
 					case 'boss':
 						main.modes.entities.boss = character;
 						break;
-					case 'beeHive':
+					case 'interactable':
+						// Assuming Bee Hive until we get more options
 						main.modes.entities.beeHives.push(character);
+						break;
+					case 'environmental':
+						main.modes.entities.environmental.push(character);
 						break;
 					default:
 						break;
@@ -793,6 +845,20 @@ const main = {
 
 				}
 
+				// Erase Environmental
+				for (let e = 0; e < main.modes.entities.environmental.length; e++) {
+
+					const environ = main.modes.entities.environmental[e];
+					const environRect = new Rectangle(environ.position.x, environ.position.y, environ.size.x, environ.size.y);
+
+					// If the pointer is intersecting with an environmental entity, remove it
+					if (main.modes.checkRectIntersect(pointerRect, environRect)) {
+						main.modes.entities.environmental.splice(e, 1);
+						break;
+					}
+
+				}
+
 				main.draw();
 			}
 		},
@@ -835,11 +901,6 @@ const main = {
 					$('#lineType')
 						.on('change', main.modes.collisions.lines.onTypeChange)
 						.trigger('change');
-					/*
-					$('#lineNormal')
-						.on('change', main.modes.collisions.lines.onLineNormalChange)
-						.trigger('change');
-					*/
 				},
 				onTypeChange() {
 					const that = $(this);
@@ -886,7 +947,6 @@ const main = {
 					const lineSound = $('#lineSound').val();
 					const lineNormal = $('#lineNormal').val();
 					const lineColor = main.modes.collisions.lines.linesColors[lineType];
-					let snappedPosition;
 					
 					// If we're allowing snapping, find a line point that's close by
 					if (main.modes.properties.allowSnapping) {
@@ -1039,7 +1099,9 @@ const main = {
 				eventColor: {
 					EXIT: '#FF8800',
 					PITFALLS: '#88FF00',
-					GENERIC: '#E76960',
+					GENERIC: '#0088FF',
+					CHECKPOINTS: '#6960E7',
+					ENEMYJUMP: '#C2BC32',
 				},
 				exit: undefined,
 				action(mousePos) {
@@ -1254,12 +1316,21 @@ const main = {
 				{ filename: 'BG2.png', optgroup: 'JUNGLE', layer: 2, width: 8064, height: 648, },
 				{ filename: 'BG3.png', optgroup: 'JUNGLE', layer: 3, width: 8064, height: 648, },
 				{ filename: 'BG4.png', optgroup: 'JUNGLE', layer: 4, width: 8064, height: 648, },				
-				{ filename: 'FOREST_BACKGROUND.png', optgroup: 'FOREST', layer: 0, width: 4000, height: 648, },
-				{ filename: 'FOREST_TREES_1.png', optgroup: 'FOREST', layer: 1, width: 4000, height: 648, },
-				{ filename: 'FOREST_TREES_2.png', optgroup: 'FOREST', layer: 2, width: 4000, height: 648, },
-				{ filename: 'FOREST_TREES_3.png', optgroup: 'FOREST', layer: 3, width: 4000, height: 648, },
-				{ filename: 'FOREST_TREES_4.png', optgroup: 'FOREST', layer: 4, width: 4000, height: 648, },
-				{ filename: 'FOREST_FOREGROUND.png', optgroup: 'FOREST', layer: 5, width: 4000, height: 648, },
+				{ filename: 'draft_FOREST_BACKGROUND.png', optgroup: 'DRAFT FOREST', layer: 0, width: 4000, height: 648, },
+				{ filename: 'draft_FOREST_TREES_1.png', optgroup: 'DRAFT FOREST', layer: 1, width: 4000, height: 648, },
+				{ filename: 'draft_FOREST_TREES_2.png', optgroup: 'DRAFT FOREST', layer: 2, width: 4000, height: 648, },
+				{ filename: 'draft_FOREST_TREES_3.png', optgroup: 'DRAFT FOREST', layer: 3, width: 4000, height: 648, },
+				{ filename: 'draft_FOREST_TREES_4.png', optgroup: 'DRAFT FOREST', layer: 4, width: 4000, height: 648, },
+				{ filename: 'draft_FOREST_FOREGROUND.png', optgroup: 'DRAFT FOREST', layer: 5, width: 4000, height: 648, },				
+				{ filename: 'Forest_Background.png', optgroup: 'FOREST', layer: 0, width: 1000, height: 648, },
+				{ filename: 'Forest_Trees_5_Repeatable.png', optgroup: 'FOREST', layer: 1, width: 3000, height: 648, },
+				{ filename: 'Forest_Trees_4.png', optgroup: 'FOREST', layer: 1, width: 10000, height: 648, },
+				{ filename: 'Forest_Trees_4_Repeatable.png', optgroup: 'FOREST', layer: 1, width: 3000, height: 648, },
+				{ filename: 'Forest_Trees_3.png', optgroup: 'FOREST', layer: 2, width: 10000, height: 648, },
+				{ filename: 'Forest_Trees_3_Repeatable.png', optgroup: 'FOREST', layer: 2, width: 3000, height: 648, },
+				{ filename: 'Forest_Trees_2.png', optgroup: 'FOREST', layer: 3, width: 10000, height: 648, },
+				{ filename: 'Forest_Trees_2_Repeatable.png', optgroup: 'FOREST', layer: 3, width: 3000, height: 648, },
+				{ filename: 'Forest_Foreground.png', optgroup: 'FOREST', layer: 4, width: 10000, height: 648, },
 				{ filename: 'Blockland-BG-0.png', optgroup: 'BLOCKLAND', layer: 0, width: 6000, height: 648, },
 				{ filename: 'Blockland-BG-0-2.png', optgroup: 'BLOCKLAND', layer: 0, width: 1000, height: 648, },
 				{ filename: 'Blockland-BG-1.png', optgroup: 'BLOCKLAND', layer: 1, width: 6000, height: 648, },
@@ -1274,13 +1345,13 @@ const main = {
 				{ filename: 'moon_blur.png', optgroup: '', layer: 1, width: 879, height: 875, },
 			],
 			imageSelectOpeners: [
-				'Pick something... quickly',
-				'Choose wisely',
-				'Here we go again...',
-				'Haven\'t you had enough?',
-				'[REDACTED]',
-				'Is this one a repeat?',
-				'Now is it a repeat?'
+				`Pick something... quickly`,
+				`Choose wisely`,
+				`Here we go again...`,
+				`Haven't you had enough?`,
+				`[REDACTED]`,
+				`Is this one a repeat?`,
+				`Now is it a repeat?`
 			],
 			init() {
 				$('.backgroundModeBtn').on('click', main.modes.backgrounds.onModeChange);
@@ -1698,7 +1769,9 @@ const main = {
 				main.modes.entities.player = new Character(
 					new Vector2(input.player.start[0], input.player.start[1]),
 					new Vector2(input.player.size[0], input.player.size[1]),
-					'player'
+					'Player',
+					'character',
+					input.player.path
 				);
 
 				// Boss
@@ -1707,7 +1780,9 @@ const main = {
 				main.modes.entities.boss = new Character(
 					new Vector2(input.boss.start[0], input.boss.start[1]),
 					new Vector2(input.boss.size[0], input.boss.size[1]),
-					'boss'
+					input.boss.name,
+					input.boss.type,
+					input.boss.path
 				);
 
 				// Bears
@@ -1718,7 +1793,9 @@ const main = {
 						new Character(
 							new Vector2(bear.start[0], bear.start[1]),
 							new Vector2(bear.size[0], bear.size[1]),
-							'bear'
+							'Bear',
+							'character',
+							bear.path
 						)
 					);
 				}
@@ -1732,7 +1809,26 @@ const main = {
 							new Character(
 								new Vector2(hive.start[0], hive.start[1]),
 								new Vector2(hive.size[0], hive.size[1]),
-								'beeHive'
+								'Bee Hive',
+								'interactable',
+								hive.path
+							)
+						);
+					}
+				}
+				
+				// Environmental Entities
+				main.modes.entities.environmental = [];
+
+				if (input.environmental) {
+					for (const environ of input.environmental) {
+						main.modes.entities.environmental.push(
+							new Character(
+								new Vector2(environ.start[0], environ.start[1]),
+								new Vector2(environ.size[0], environ.size[1]),
+								environ.name,
+								'environmental',
+								environ.path
 							)
 						);
 					}
@@ -1801,8 +1897,44 @@ const main = {
 						main.modes.collisions.events.eventColor['GENERIC']
 					);
 					main.modes.collisions.events.eventArr.push(
-						new CollisionEvent('GENERIC', '', genericTexture)
+						new CollisionEvent('GENERIC', generic.name, genericTexture)
 					);
+				}
+
+				if (input.eventCollision.checkpoints) {
+				
+					// Event Collision - Checkpoints
+					for (const checkpoint of input.eventCollision.checkpoints) {
+						const checkpointTexture = new Texture(
+							new Vector2(checkpoint.pos[0], checkpoint.pos[1]),
+							new Vector2(checkpoint.size[0], checkpoint.size[1]),
+							`${main.modes.collisions.events.eventColor['CHECKPOINTS']}66`,
+							1,
+							main.modes.collisions.events.eventColor['CHECKPOINTS']
+						);
+						main.modes.collisions.events.eventArr.push(
+							new CollisionEvent('CHECKPOINTS', checkpoint.name, checkpointTexture)
+						);
+					}
+
+				}
+				
+				if (input.eventCollision.enemyjump) {
+				
+					// Event Collision - Enemy Jumps
+					for (const jump of input.eventCollision.enemyjump) {
+						const jumpTexture = new Texture(
+							new Vector2(jump.pos[0], jump.pos[1]),
+							new Vector2(jump.size[0], jump.size[1]),
+							`${main.modes.collisions.events.eventColor['ENEMYJUMP']}66`,
+							1,
+							main.modes.collisions.events.eventColor['ENEMYJUMP']
+						);
+						main.modes.collisions.events.eventArr.push(
+							new CollisionEvent('ENEMYJUMP', jump.name, jumpTexture)
+						);
+					}
+
 				}
 
 				// Boundary Collision
@@ -1883,7 +2015,8 @@ const main = {
 				if (main.modes.entities.player) {
 					output.player = {
 						start: [+main.modes.entities.player.position.x, +main.modes.entities.player.position.y],
-						size: [+main.modes.entities.player.size.x, +main.modes.entities.player.size.y]
+						size: [+main.modes.entities.player.size.x, +main.modes.entities.player.size.y],
+						path: main.modes.entities.player.path
 					}
 				} else {
 					output.player = {};
@@ -1893,9 +2026,10 @@ const main = {
 				// BOSS
 				if (main.modes.entities.boss) {
 					output.boss = {
-						name: 'Tree Monster',
+						name: main.modes.entities.boss.name,
 						start: [+main.modes.entities.boss.position.x, +main.modes.entities.boss.position.y],
-						size: [+main.modes.entities.boss.size.x, +main.modes.entities.boss.size.y]
+						size: [+main.modes.entities.boss.size.x, +main.modes.entities.boss.size.y],
+						path: main.modes.entities.boss.path
 					}
 				} else {
 					output.boss = {};
@@ -1911,15 +2045,12 @@ const main = {
 							{
 								start: [+bear.position.x, +bear.position.y],
 								size: [+bear.size.x, +bear.size.y],
-								region: {
-									pos: [0, 0],
-									size: [9000, 9000],
-								}
+								path: bear.path
 							}
 						);
 					}
 				} else {
-					errors.push('<span class="keyword">Bears</span> missing');
+					errors.push('<span class="keyword">BEARS</span> missing');
 				}
 
 				// Bee Hives
@@ -1931,15 +2062,30 @@ const main = {
 							{
 								start: [+hive.position.x, +hive.position.y],
 								size: [+hive.size.x, +hive.size.y],
-								region: {
-									pos: [0, 0],
-									size: [9000, 9000],
-								}
+								path: hive.path
 							}
 						);
 					}
 				} else {
-					errors.push('<span class="keyword">Bee Hives</span> missing');
+					errors.push('<span class="keyword">BEE HIVES</span> missing');
+				}
+				
+				// Environmental Entities
+				output.environmental = [];
+
+				if (main.modes.entities.environmental.length > 0) {
+					for (const environ of main.modes.entities.environmental) {
+						output.environmental.push(
+							{
+								start: [+environ.position.x, +environ.position.y],
+								size: [+environ.size.x, +environ.size.y],
+								name: environ.name,
+								path: environ.path
+							}
+						);
+					}
+				} else {
+					errors.push('<span class="keyword">ENVIRONMENTAL ENTITIES</span> missing');
 				}
 
 				// Backgrounds
@@ -1984,7 +2130,9 @@ const main = {
 				// event collision - other
 				output.eventCollision.pitfalls = [];
 				output.eventCollision.generic = [];
-
+				output.eventCollision.checkpoints = [];
+				output.eventCollision.enemyjump = [];
+				
 				if (main.modes.collisions.events.eventArr.length > 0) {
 					for (const event of main.modes.collisions.events.eventArr) {
 						const type = event.type.toLowerCase();
@@ -2015,8 +2163,6 @@ const main = {
 								n: line.normal,
 								s: line.sound,
 								h: line.color,
-								// rx: line.region.x,
-								// ry: line.region.y,
 								sl: line.slope,
 								b: line.yIntercept,
 							}
@@ -2091,6 +2237,7 @@ const main = {
 
 				headerArea.text(title);
 				contentArea.val(content);
+				main.input.onDialogKeyup();
 
 				dialog.fadeIn(200);
 				overlay.fadeIn(200);
@@ -2141,17 +2288,6 @@ const main = {
 			}
 		}
 
-		/* LINES */
-		if (main.modes.properties.showLines) {
-			for (const line of main.modes.collisions.lines.lineArr) {
-				line.draw();
-			}
-
-			if (typeof main.modes.collisions.lines.currentLine !== 'undefined') {
-				main.modes.collisions.lines.currentLine.draw();
-			}
-		}
-
 		/* EVENTS */
 		if (main.modes.properties.showEvents) {
 
@@ -2189,16 +2325,32 @@ const main = {
 				hive.draw();
 			}
 
+			// Environmental Entities
+			for (const environ of main.modes.entities.environmental) {
+				environ.draw();
+			}
+
 			// Player
 			if (main.modes.entities.player) {
 				main.modes.entities.player.draw();
 			}
 
 			// Boss
-			if (main.modes.entities.boss) {
-				main.modes.entities.boss.draw();
+			if (main.modes.entities.boss ) {
+				main.modes.entities.boss .draw();
 			}
 
+		}
+
+		/* LINES */
+		if (main.modes.properties.showLines) {
+			for (const line of main.modes.collisions.lines.lineArr) {
+				line.draw();
+			}
+
+			if (typeof main.modes.collisions.lines.currentLine !== 'undefined') {
+				main.modes.collisions.lines.currentLine.draw();
+			}
 		}
 		
 		main.camera.camera.end();

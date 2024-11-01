@@ -23,6 +23,7 @@
 			<div id="copy">Copy To Clipboard</div>
 		</div>
 		<div id="dialogFooter">
+			<div id="dialogCharCount"><span id="count">0</span> charaters</div>
 			<div class="button save" id="dialogSaveBtn">LOAD</div>
 			<div class="button close" id="dialogCloseBtn">CLOSE</div>
 		</div>
@@ -70,10 +71,10 @@
 				<h3>Tools</h3>
 
 				<div id="viewBtnSection">
-					<div id="properties" class="viewBtn" alt="Properties" title="Properties">&nbsp;</div>
-					<div id="background" class="viewBtn" alt="Background" title="Background">&nbsp;</div>
-					<div id="collision" class="viewBtn" alt="Collision" title="Collision">&nbsp;</div>
-					<div id="entity" class="viewBtn" alt="Entities" title="Entities">&nbsp;</div>
+					<div id="properties" class="viewBtn border-radius five" alt="Properties" title="Properties">&nbsp;</div>
+					<div id="background" class="viewBtn border-radius five" alt="Background" title="Background">&nbsp;</div>
+					<div id="collision" class="viewBtn border-radius five" alt="Collision" title="Collision">&nbsp;</div>
+					<div id="entity" class="viewBtn border-radius five" alt="Entities" title="Entities">&nbsp;</div>
 				</div>
 			</div>
 			
@@ -83,36 +84,36 @@
 				<h3>Properties</h3>
 
 				<div class="propertiesRow">
-					<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes" value="Background" checked="true">
+					<input type="checkbox" id="showBackgroundCheckbox" class="checkboxes border-radius five" value="Background" checked="true">
 					<label class="bump up3" for="showBackgroundCheckbox">Show Background</label>
 				</div>
 				<div class="propertiesRow">
-					<input type="checkbox" id="showGridCheckbox" class="checkboxes" value="Grid">
+					<input type="checkbox" id="showGridCheckbox" class="checkboxes border-radius five" value="Grid">
 					<label class="bump up3" for="showGridCheckbox">Show Regions</label>
 				</div>
 				<div class="propertiesRow">
-					<input type="checkbox" id="showLinesCheckbox" class="checkboxes" value="Lines" checked="true">
+					<input type="checkbox" id="showLinesCheckbox" class="checkboxes border-radius five" value="Lines" checked="true">
 					<label class="bump up3" for="showLinesCheckbox">Show Lines</label>
 				</div>
 				<div class="propertiesRow">
-					<input type="checkbox" id="showSnapCheckbox" class="checkboxes bump down2" value="Snap" checked="true">
+					<input type="checkbox" id="showSnapCheckbox" class="checkboxes border-radius five bump down2" value="Snap" checked="true">
 					<label for="showSnapCheckbox" class="bump down1">Allow Snapping</label>
-					<input type="text" id="lineSnapThreshold" alt="Line snap threshold" title="Line snap threshold" value="30">
+					<input type="text" id="lineSnapThreshold" class="border-radius five" alt="Line snap threshold" title="Line snap threshold" value="30">
 
 				</div>
 				<div class="propertiesRow">
-					<input type="checkbox" id="showEntityCheckbox" class="checkboxes" value="Entities" checked="true">
+					<input type="checkbox" id="showEntityCheckbox" class="checkboxes border-radius five" value="Entities" checked="true">
 					<label class="bump up3" for="showEntityCheckbox">Show Entities</label>
 				</div>
 				<div class="propertiesRow">
-					<input type="checkbox" id="showEventsCheckbox" class="checkboxes" value="Events" checked="true">
+					<input type="checkbox" id="showEventsCheckbox" class="checkboxes border-radius five" value="Events" checked="true">
 					<label class="bump up3" for="showEventsCheckbox">Show Events</label>
 				</div>
 				<div class="propertiesRow">
-					<textarea class="propertiesField" id="introText" data-defaulttext="Intro Text" maxlength="300"></textarea>
+					<textarea class="propertiesField border-radius five" id="introText" data-defaulttext="Intro Text" maxlength="300"></textarea>
 				</div>
 				<div class="propertiesRow">
-					<input type="text" class="propertiesField" id="levelName" data-defaulttext="Level Name" value="" />
+					<input type="text" class="propertiesField border-radius five" id="levelName" data-defaulttext="Level Name" value="" />
 				</div>
 
 			</div>
@@ -124,24 +125,33 @@
 
 				<div class="subSection">
 					<label for="entityType">Type:</label>
-					<select id="entityType">
-						<option value="player">PLAYER</option>
-						<option value="bear">BEAR</option>
-						<option value="boss">BOSS</option>
-						<option value="beeHive">BEE HIVE</option>
-						<option value="bush">BUSH</option>
-						<option value="caveFront">CAVE (F)</option>
-						<option value="caveBack">CAVE (B)</option>
-						<option value="logBack">LOG (F)</option>
-						<option value="logBack">LOG (B)</option>
+					<select id="entityType" class="border-radius five">
+						<optgroup label="CHARACTERS">
+							<option value="Player" type="character" path="images/entities/HoneyBear.png" width="45" height="65">PLAYER</option>
+							<option value="Bear" type="character" path="images/entities/Bear.png" width="45" height="65">BEAR</option>
+						</optgroup>
+						<optgroup label="BOSSES">
+							<option value="Tree Monster" type="boss" path="images/entities/TreeMonster.png" width="936" height="439">TREE MONSTER</option>
+						</optgroup>
+						<optgroup label="INTERACTABLES">
+							<option value="Bee Hive" type="interactable" path="images/entities/BeeHive.png" width="30" height="40">BEE HIVE</option>
+						</optgroup>
+						<optgroup label="HAZARDS">
+							<option value="Bush" type="hazard" path="images/entities/bush.png" width="100" height="74">BUSH</option>
+						</optgroup>
+						<optgroup label="ENVIRONMENTAL">
+							<option value="Cave Front" type="environmental" path="images/entities/Forest-Cave-Front.png" width="95" height="203">CAVE FRONT</option>
+							<option value="Log Front" type="environmental" path="images/entities/Forest-Log-Front.png" width="327" height="211">LOG FRONT</option>
+							<option value="Twilight Exit" type="environmental" path="images/entities/Blockland-Exit-Front.png" width="132" height="170">TWILIGHT EXIT</option>
+						</optgroup>
 					</select>
 				</div>
 
 				<div class="subSection">
-					<label for="entityWidth">Width:</label>
-					<input type="text" id="entityWidth" class="entitySize" data-type="width" value="40" />
+					<label for="entityWidth" id="entityWidthLabel">Width:</label>
+					<input type="text" id="entityWidth" class="entitySize border-radius five" data-type="width" value="40" />
 					<label for="entityHeight">Height:</label>
-					<input type="text" id="entityHeight" class="entitySize" data-type="height" value="65" />
+					<input type="text" id="entityHeight" class="entitySize border-radius five" data-type="height" value="65" />
 				</div>
 
 			</div>
@@ -152,8 +162,8 @@
 				<h3>Background</h3>
 
 				<div id="backgroundModeSection" class="subSection">
-					<div id="backgroundSize" class="backgroundModeBtn active">LEVEL SIZE</div>
-					<div id="backgroundImage" class="backgroundModeBtn">IMAGES</div>
+					<div id="backgroundSize" class="backgroundModeBtn border-radius five active">LEVEL SIZE</div>
+					<div id="backgroundImage" class="backgroundModeBtn border-radius five">IMAGES</div>
 				</div>
 
 				<!-- BACKGROUND SIZE SECTION -->
@@ -176,7 +186,7 @@
 					</div>
 
 					<div class="subSection">
-						<div id="backgroundApplyBtn">APPLY</div>
+						<div id="backgroundApplyBtn" class="border-radius five">APPLY</div>
 					</div>
 
 				</div>
@@ -212,8 +222,8 @@
 				<h3>Collision</u></h3>
 
 			<div id="collisionTypes">
-					<div id="lines" class="collisionType">LINE</div>
-					<div id="events" class="collisionType">EVENT</div>
+					<div id="lines" class="collisionType border-radius five">LINE</div>
+					<div id="events" class="collisionType border-radius five">EVENT</div>
 					<!-- <div id="hazard" class="collisionType">HAZARD</div> -->
 				</div>
 
@@ -222,7 +232,7 @@
 					
 					<div class="linePropertiesDiv">
 						<label for="lineType">Type:</label>
-						<select id="lineType">
+						<select id="lineType" class="border-radius five">
 							<option value="FLOOR">FLOOR</option>
 							<option value="WALL">WALL</option>
 							<option value="CEILING">CEILING</option>
@@ -232,7 +242,7 @@
 					<div class="linePropertiesDiv">
 						<label for="lineNormal">Normal:</label>
 						<!-- <div id="normalIcon">&nbsp;</div> -->
-						<select id="lineNormal" readonly disabled>
+						<select id="lineNormal" class="border-radius five" readonly disabled>
 							<option value="-1">&rarr;|</option>
 							<option value="1">|&larr;</option>
 						</select>
@@ -240,7 +250,7 @@
 
 					<div class="linePropertiesDiv">
 						<label for="lineSound">Sound:</label>
-						<input type="text" id="lineSound" value="WOOD">
+						<input type="text" id="lineSound" class="border-radius five" value="GRASS">
 					</div>
 
 				</div>
@@ -250,16 +260,18 @@
 					
 					<div class="eventPropertiesDiv">
 						<label for="eventType">Type:</label>
-						<select id="eventType">
+						<select id="eventType" class="border-radius five">
 							<option value="EXIT" data-defaultname="EXIT">EXIT</option>
 							<option value="PITFALLS" data-defaultname="PITFALLS">PITFALLS</option>
 							<option value="GENERIC" data-defaultname="">GENERIC</option>
+							<option value="CHECKPOINTS" data-defaultname="CHECKPOINT">CHECK POINTS</option>
+							<option value="ENEMYJUMP" data-defaultname="ENEMY JUMP">ENEMY JUMPING POINT</option>
 						</select>
 					</div>
 
 					<div id="eventNameDiv" class="eventPropertiesDiv">
 						<label for="eventName">Name:</label>
-						<input type="text" id="eventName" value=""/>
+						<input type="text" id="eventName" class="border-radius five" value=""/>
 					</div>
 
 				</div>
@@ -279,13 +291,13 @@
 				<div id="btnSection">
 
 					<!-- LOAD BUTTON -->
-					<div class="actionBtn" id="loadBtn">LOAD</div>
+					<div class="actionBtn border-radius five" id="loadBtn">LOAD</div>
 
 					<!-- EXPORT BUTTON -->
-					<div class="actionBtn" id="exportBtn">EXPORT</div>
+					<div class="actionBtn border-radius five" id="exportBtn">EXPORT</div>
 
 					<!-- RESET BUTTON -->
-					<div class="actionBtn" id="resetBtn">RESET</div>
+					<div class="actionBtn border-radius five" id="resetBtn">RESET</div>
 
 				</div>
 			</div>
